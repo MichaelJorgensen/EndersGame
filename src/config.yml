@@ -1,0 +1,11 @@
+# Ender's Game Configuration
+debug: false
+sql: sqlite
+mysql:
+    hostname: localhost
+    port: '3306'
+    database: EndersGame
+    username: minecraft
+    password: password
+game:
+    max-players: 24

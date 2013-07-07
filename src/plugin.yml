@@ -1,0 +1,12 @@
+name: Enders Game
+version: 1.0
+website: http://www.homieserver.com/index.php?forum/
+main: com.homie.endersgame.EndersGame
+permissions:
+    EndersGame.*:
+        description: Gives access to all EndersGame permissions
+        children:
+            EndersGame.createsign: true
+    EndersGame.createsign:
+        description: Allows you to create a sign for join an Enders Game
+        default: true
