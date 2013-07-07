@@ -9,6 +9,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 
@@ -26,16 +27,39 @@ public class GameListener implements Listener {
 	public void onBlockPlace(SignChangeEvent event) {
 		Player player = event.getPlayer();
 		String[] line = event.getLines();
-		
-		if (line[0].contains("[EnderGame]")) {
+		int i;
+		if (line[0].toLowerCase().contains("[endersgame]")) {
+			try {
+				i = Integer.parseInt(line[1]);
+			} catch (NumberFormatException e) {
+				return;
+			}
 			if (player.hasPermission("EndersGame.createsign")) {
 				event.setLine(0, ChatColor.DARK_RED + "Ender's Game");
-				event.setLine(1, "Arena 1");
-				event.setLine(2, "0/24");
-				event.setLine(3, "");
+				event.setLine(1, "Arena " + i);
+				event.setLine(2, "0/" + plugin.getEnderConfig().getMaxPlayers());
+				event.setLine(3, "Do Not Edit");
 				try {
-					plugin.getGameManager().registerSign(event.getBlock(), 1);
+					plugin.getGameManager().registerSign(event.getBlock(), i);
 				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onBlockBreak(BlockBreakEvent event) {
+		Block b = event.getBlock();
+		if (b.getState() instanceof Sign) {
+			Sign s = (Sign) b.getState();
+			if (s.getLine(0).equalsIgnoreCase(ChatColor.DARK_RED + "Ender's Game")) {
+				try {
+					if (plugin.getGameManager().getSign(Integer.parseInt(s.getLine(1).split("Arena ")[1])) != null && !event.isCancelled()) {
+						plugin.getGameManager().unregisterSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]));
+					}
+				} catch (NumberFormatException | IndexOutOfBoundsException | SQLException e) {
+					if (e.getMessage() != null && e.getMessage().equalsIgnoreCase("ResultSet closed")) return;
 					e.printStackTrace();
 				}
 			}
@@ -48,7 +72,7 @@ public class GameListener implements Listener {
 		Block b = event.getClickedBlock();
 		
 		if (b.getState() instanceof Sign) {
-			// add the player to the game now that they clicked the sign
+			// TODO: check sign, add player to game
 		}
 	}
 }

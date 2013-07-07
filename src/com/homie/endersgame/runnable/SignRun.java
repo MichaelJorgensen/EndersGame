@@ -3,8 +3,8 @@ package com.homie.endersgame.runnable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 
-import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Sign;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.GameManager;
@@ -28,7 +28,7 @@ public class SignRun implements Runnable {
 			for (int i = 0; i < l.size(); i++) {
 				Block b = gm.getSign(l.get(i));
 				EndersGame.debug("Checking sign: " + l.get(i) + ", Block: " + b.getType());
-				if (!(b.getType() == Material.SIGN || b.getType() == Material.WALL_SIGN || b.getType() == Material.SIGN_POST)) {
+				if (!(b.getState() instanceof Sign)) {
 					gm.unregisterSign(i+1);
 					EndersGame.debug("Unregistered sign with ID " + l.get(i));
 				}

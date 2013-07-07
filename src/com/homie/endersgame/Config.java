@@ -40,4 +40,8 @@ public class Config {
 	public String getPassword() {
 		return config.getString("mysql.password", "password");
 	}
+	
+	public int getMaxPlayers() {
+		return config.getInt("game.max-players", 24);
+	}
 }

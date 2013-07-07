@@ -33,7 +33,7 @@ public class EndersGame extends JavaPlugin {
 		}
 		gm = new GameManager(this);
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new SignRun(this), 50L, 500L);
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, new SignRun(this), 75L, 1500L);
 	}
 	
 	public void onDisable() {
@@ -75,6 +75,10 @@ public class EndersGame extends JavaPlugin {
 	
 	public GameManager getGameManager() {
 		return gm;
+	}
+	
+	public Config getEnderConfig() {
+		return config;
 	}
 	
 	public static void send(String message) {
