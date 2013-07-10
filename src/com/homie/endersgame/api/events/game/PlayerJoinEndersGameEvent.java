@@ -5,14 +5,16 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
+import com.homie.endersgame.api.Game;
+
 public class PlayerJoinEndersGameEvent extends Event {
 
-	private int gameid;
+	private Game game;
 	private Player player;
 	private static final HandlerList handlers = new HandlerList();
 	
-	public PlayerJoinEndersGameEvent(int gameid, Player player) {
-		this.gameid = gameid;
+	public PlayerJoinEndersGameEvent(Game game, Player player) {
+		this.game = game;
 		this.player = player;
 	}
 	
@@ -24,8 +26,8 @@ public class PlayerJoinEndersGameEvent extends Event {
 		return handlers;
 	}
 	
-	public int getGameId() {
-		return gameid;
+	public Game getGame() {
+		return game;
 	}
 	
 	public Player getPlayer() {

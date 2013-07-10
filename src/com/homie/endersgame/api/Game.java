@@ -3,7 +3,6 @@ package com.homie.endersgame.api;
 import java.util.HashMap;
 
 import org.bukkit.Location;
-import org.bukkit.entity.Player;
 
 public class Game {
 
@@ -11,20 +10,39 @@ public class Game {
 	private int lobbyid;
 	private Location l1;
 	private Location l2;
-	private HashMap<Player, Boolean> list;
+	private HashMap<String, Boolean> list;
 	private GameStage gamestage;
 	
-	public Game(int gameid, int lobbyid, Location l1, Location l2, HashMap<Player, Boolean> list) {
+	public Game(int gameid, int lobbyid, Location l1, Location l2, HashMap<String, Boolean> list, GameStage gamestage) {
 		this.gameid = gameid;
 		this.lobbyid = lobbyid;
 		this.l1 = l1;
 		this.l2 = l2;
 		this.list = list;
-		this.gamestage = GameStage.Lobby;
+		this.gamestage = gamestage;
 	}
 	
 	public enum GameStage {
 		Lobby, Ingame, Endgame;
+		
+		public static GameStage getFrom(String args) {
+			switch(args.toLowerCase()) {
+			case "lobby": return GameStage.Lobby;
+			case "ingame": return GameStage.Ingame;
+			case "endgame": return GameStage.Endgame;
+			default: return GameStage.Lobby;
+			}
+		}
+		
+		@Override
+		public String toString() {
+			switch(this) {
+			case Endgame: return "Endgame";
+			case Ingame: return "Ingame";
+			case Lobby: return "Lobby";
+			default: return null;
+			}
+		}
 	}
 	
 	public int getGameId() {
@@ -55,11 +73,11 @@ public class Game {
 		this.l2 = l2;
 	}
 	
-	public HashMap<Player, Boolean> getPlayerList() {
+	public HashMap<String, Boolean> getPlayerList() {
 		return list;
 	}
 	
-	public void setPlayerList(HashMap<Player, Boolean> list) {
+	public void setPlayerList(HashMap<String, Boolean> list) {
 		this.list = list;
 	}
 	

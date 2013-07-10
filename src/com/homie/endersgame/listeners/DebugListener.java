@@ -14,7 +14,7 @@ public class DebugListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onPlayerJoinEndersGame(PlayerJoinEndersGameEvent event) {
-		EndersGame.debug("Player '" + event.getPlayer().getName() + "' has joined Arena " + event.getGameId());
+		EndersGame.debug("Player '" + event.getPlayer().getName() + "' has joined Arena " + event.getGame().getGameId());
 	}
 	
 	@EventHandler(priority = EventPriority.MONITOR)
