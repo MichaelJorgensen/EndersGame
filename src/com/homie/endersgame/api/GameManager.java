@@ -6,6 +6,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -14,6 +15,7 @@ import org.bukkit.block.Sign;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game.GameStage;
+import com.homie.endersgame.api.Game.GameTeam;
 import com.homie.endersgame.sql.SQL;
 import com.homie.endersgame.sql.options.MySQLOptions;
 
@@ -120,9 +122,32 @@ public class GameManager {
 		EndersGame.debug("Full update done on game " + gameid);
 	}
 	
-	public void updateGamePlayers(int gameid, HashMap<String, Boolean> players) throws SQLException {
+	public HashMap<String, GameTeam> getGamePlayers(int gameid) throws SQLException {
+		ResultSet rs = sql.query("SELECT players FROM games WHERE gameid=" + gameid);
+		if (rs == null) return null;
+		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
+		String players = rs.getString("players");
+		EndersGame.debug("Detected players for game " + gameid + ": " + players);
+		return plugin.convertPlayerListToHash(players);
+	}
+	
+	public void updateGamePlayers(int gameid, HashMap<String, GameTeam> players) throws SQLException {
 		sql.query("UPDATE games SET players='" + plugin.convertPlayerListToString(players) + "' WHERE gameid=" + gameid);
 		EndersGame.debug("Updated player list for game " + gameid);
+	}
+	
+	public ArrayList<String> getPlayersOnTeam(int gameid, GameTeam team) throws SQLException {
+		ArrayList<String> list = new ArrayList<String>();
+		ResultSet rs = sql.query("SELECT players FROM games WHERE gameid=" +  gameid);
+		if (rs == null) return list;
+		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
+		HashMap<String, GameTeam> l = plugin.convertPlayerListToHash(rs.getString(1));
+		for (Map.Entry<String, GameTeam> en : l.entrySet()) {
+			if (en.getValue() == team) {
+				list.add(en.getKey());
+			}
+		}
+		return list;
 	}
 	
 	public void unregisterGame(int gameid) throws SQLException {
@@ -252,5 +277,15 @@ public class GameManager {
 		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
 		return new Location(plugin.getServer().getWorld(rs.getString("world")),
 				rs.getInt("coordX"), rs.getInt("coordY"), rs.getInt("coordZ"));
+	}
+	
+	public ArrayList<Integer> getAllLobbiesFromDatabase() throws SQLException {
+		ResultSet rs = sql.query("SELECT lobbyid FROM lobbies");
+		ArrayList<Integer> list = new ArrayList<Integer>();
+		if (rs == null) return list;
+		while (rs.next()) {
+			list.add(rs.getInt(1));
+		}
+		return list;
 	}
 }

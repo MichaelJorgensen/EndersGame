@@ -27,7 +27,6 @@ public class SignRun implements Runnable {
 			ArrayList<Integer> l = gm.getAllSignsFromDatabase();
 			for (int i = 0; i < l.size(); i++) {
 				Block b = gm.getSign(l.get(i));
-				EndersGame.debug("Checking sign: " + l.get(i) + ", Block: " + b.getType());
 				if (!(b.getState() instanceof Sign)) {
 					gm.unregisterSign(i+1);
 					EndersGame.debug("Unregistered sign with ID " + l.get(i));

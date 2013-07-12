@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -16,10 +17,14 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.homie.endersgame.api.Game.GameTeam;
 import com.homie.endersgame.api.GameManager;
+import com.homie.endersgame.api.events.EventHandle;
+import com.homie.endersgame.api.events.game.PlayerAttemptLeaveEndersGameEvent;
 import com.homie.endersgame.listeners.DebugListener;
 import com.homie.endersgame.listeners.EndersGameListener;
 import com.homie.endersgame.listeners.GameListener;
+import com.homie.endersgame.runnable.GameRun;
 import com.homie.endersgame.runnable.SignRun;
 import com.homie.endersgame.sql.SQL;
 import com.homie.endersgame.sql.options.DatabaseOptions;
@@ -34,7 +39,11 @@ public class EndersGame extends JavaPlugin {
 	private Config config;
 	private static boolean debug;
 	
+	private EndersGameListener el;
+	private SignRun sr;
+	
 	public static HashMap<String, ItemStack[]> playing_players_inventory = new HashMap<String, ItemStack[]>();
+	public static HashMap<String, GameMode> playing_players_gamemode = new HashMap<String, GameMode>();
 	
 	public static ArrayList<String> creating_game_players = new ArrayList<String>();
 	public static HashMap<String, ArrayList<Integer>> creating_game_ids = new HashMap<String, ArrayList<Integer>>();
@@ -58,23 +67,37 @@ public class EndersGame extends JavaPlugin {
 		// With SQL setup, we can initiate the game manager
 		gm = new GameManager(this);
 		
+		el = new EndersGameListener(this);
+		sr = new SignRun(this);
 		// Register events and runnables
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
-		getServer().getPluginManager().registerEvents(new EndersGameListener(this), this);
+		getServer().getPluginManager().registerEvents(el, this);
 		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new SignRun(this), 75L, 8000L);
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, sr, 75L, 8000L);
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, new GameRun(this), 10L, 60L);
 	}
 	
 	public void onDisable() {
+		send("Ejecting all players from any arenas");
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				HashMap<String, GameTeam> list = gm.getGamePlayers(i);
+				for (Map.Entry<String, GameTeam> en : list.entrySet()) {
+					el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
+				}
+				list.clear();
+				gm.updateGamePlayers(i, list);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		
+		send("Attempting to close SQL connection");
 		try {
 			sql.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
-		sql = null;
-		dop = null;
-		gm = null;
-		config = null;
 	}
 	
 	private boolean setupSQL() {
@@ -84,9 +107,7 @@ public class EndersGame extends JavaPlugin {
 		
 		else if (config.getSQLValue().equalsIgnoreCase("SQLite")) {
 			dop = new SQLiteOptions(new File(getDataFolder() + "/game_data.db"));
-		}
-		
-		else {
+		} else {
 			sendErr("Enders Game cannot enable because the SQL is set to " + config.getSQLValue());
 			return false;
 		}
@@ -118,6 +139,14 @@ public class EndersGame extends JavaPlugin {
 		return config;
 	}
 	
+	public boolean debug() {
+		return debug;
+	}
+	
+	public Config getConfiguration() {
+		return config;
+	}
+	
 	public static void send(String message) {
 		System.out.println("[EndersGame] " + message);
 	}
@@ -132,6 +161,7 @@ public class EndersGame extends JavaPlugin {
 	
 	private void help(CommandSender s) {
 		s.sendMessage(ChatColor.RED + "Ender's Game Commands You Can Use");
+		if (s.hasPermission("EndersGame.join")) s.sendMessage(ChatColor.GOLD + "/eg join [arenaID]");
 		if (s.hasPermission("EndersGame.join")) s.sendMessage(ChatColor.GOLD + "/eg leave");
 		if (s.hasPermission("EndersGame.list")) s.sendMessage(ChatColor.GOLD + "/eg list");
 		if (s.hasPermission("EndersGame.create")) s.sendMessage(ChatColor.GOLD + "/eg create arena [id] [lobbyID]");
@@ -141,27 +171,25 @@ public class EndersGame extends JavaPlugin {
 		if (s.hasPermission("EndersGame.delete")) s.sendMessage(ChatColor.GOLD + "/eg delete [arena|lobby] [id]");
 	}
 	
-	public HashMap<String, Boolean> convertPlayerListToHash(String args) {
-		HashMap<String, Boolean> pl = new HashMap<String, Boolean>();
+	public HashMap<String, GameTeam> convertPlayerListToHash(String args) {
+		HashMap<String, GameTeam> pl = new HashMap<String, GameTeam>();
 		if (args == null || args.length() < 1) return pl;
 		String[] sp = args.split(",");
 		for (int i = 0; i < sp.length; i++) {
-			String a = String.valueOf(sp[i].split("")[0]);
-			Boolean b = Boolean.valueOf(sp[i].split("#")[1]);
+			String a = String.valueOf(sp[i].split("#")[0]);
+			GameTeam b = GameTeam.getFrom(sp[i].split("#")[1]);
 			pl.put(a, b);
 		}
-		debug(pl.toString());
 		return pl;
 	}
 	
-	public String convertPlayerListToString(HashMap<String, Boolean> hash) {
+	public String convertPlayerListToString(HashMap<String, GameTeam> hash) {
 		if (hash == null || hash.isEmpty() || hash.size() < 1) return "";
 		StringBuilder sb = new StringBuilder();
-		for (Map.Entry<String, Boolean> en : hash.entrySet()) {
-			sb.append(en.getKey()+"#"+en.getValue()+",");
+		for (Map.Entry<String, GameTeam> en : hash.entrySet()) {
+			sb.append(en.getKey()+"#"+en.getValue().toString()+",");
 		}
 		sb.deleteCharAt(sb.length()-1);
-		debug(sb.toString());
 		return sb.toString();
 	}
 	
@@ -185,16 +213,19 @@ public class EndersGame extends JavaPlugin {
 						int b = -1;
 						try {
 							a = Integer.parseInt(args[2]);
-							if (args[1].equalsIgnoreCase("arena")) b = Integer.parseInt(args[3]);
+							if (args[1].equalsIgnoreCase("arena")) {
+								if (args.length == 4) {
+									b = Integer.parseInt(args[3]);
+								} else {
+									player.sendMessage(ChatColor.GOLD + "/eg create arena [id] [lobbyID]");
+									return true;
+								}
+							}
 						} catch (NumberFormatException e) {
 							player.sendMessage(ChatColor.GOLD + args[2] + ChatColor.RED + " and/or " + ChatColor.GOLD + args[3] + ChatColor.RED + " are not numbers");
 							return true;
 						}
 						if (args[1].equalsIgnoreCase("arena")) {
-							if (args.length != 4) {
-								player.sendMessage(ChatColor.GOLD + "/eg create arena [id] [lobbyID]");
-								return true;
-							}
 							ArrayList<Integer> j = new ArrayList<Integer>();
 							j.add(a);
 							j.add(b);
@@ -244,6 +275,75 @@ public class EndersGame extends JavaPlugin {
 				}
 			} else {
 				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.create)");
+				return true;
+			}
+		}
+		
+		else if (args[0].equalsIgnoreCase("join")) {
+			if (sender instanceof Player) {
+				Player player = (Player) sender;
+				if (player.hasPermission("EndersGame.join")) {
+					if (args.length == 2) {
+						int x;
+						try {
+							x = Integer.parseInt(args[1]);
+							EventHandle.callPlayerJoinEndersGameEvent(gm.getGame(x), player);
+							return true;
+						} catch (NumberFormatException e) {
+							player.sendMessage(ChatColor.GOLD + args[1] + ChatColor.RED + " is not a number");
+							return true;
+						} catch (SQLException e) {
+							if (e.getMessage() != null && e.getMessage().equalsIgnoreCase("ResultSet closed")) {
+								player.sendMessage(ChatColor.RED + "That arena doesn't exist");
+								return true;
+							}
+							player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
+							sendErr("SQLException while trying to get a lobby and game from the database, error: " + e.getErrorCode() + ", message: " + e.getMessage());
+							e.printStackTrace();
+							return true;
+						}
+					} else {
+						player.sendMessage(ChatColor.GOLD + "/eg join [arenaID]");
+						return true;
+					}
+				} else {
+					player.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.join)");
+					return true;
+				}
+			} else {
+				sender.sendMessage(ChatColor.RED + "You must be a player to join an arena");
+				return true;
+			}
+		}
+		
+		else if (args[0].equalsIgnoreCase("leave")) {
+			if (sender instanceof Player) {
+				PlayerAttemptLeaveEndersGameEvent event = EventHandle.callPlayerAttemptLeaveEndersGameEvent((Player) sender, true);
+				if (event.getSuccess() && event.shouldMessage()) {
+					sender.sendMessage(ChatColor.GREEN + "You have left the arena");
+					return true;
+				}
+				else if (!event.getSuccess() && event.shouldMessage()) {
+					sender.sendMessage(ChatColor.RED + "You aren't in an arena");
+					return true;
+				}
+				return true;
+			}
+		}
+		
+		else if (args[0].equalsIgnoreCase("list")) {
+			if (sender.hasPermission("EndersGame.list")) {
+				try {
+					ArrayList<Integer> gamelist = gm.getAllGamesFromDatabase();
+					ArrayList<Integer> lobbylist = gm.getAllLobbiesFromDatabase();
+					sender.sendMessage(ChatColor.GOLD + "Game IDs: " + ChatColor.GREEN + gamelist.toString());
+					sender.sendMessage(ChatColor.GOLD + "Lobby IDs: " + ChatColor.GREEN + lobbylist.toString());
+					return true;
+				} catch (SQLException e) {
+					e.printStackTrace();
+				}
+			} else {
+				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.list)");
 				return true;
 			}
 		}
@@ -341,34 +441,11 @@ public class EndersGame extends JavaPlugin {
 		}
 		
 		else if (args[0].equalsIgnoreCase("cancel")) {
-			if (sender instanceof Player) {
-				Player player = (Player) sender;
-				if (creating_game_players.contains(player.getName())) {
-					creating_game_players.remove(player.getName());
-					creating_game_ids.remove(player.getName());
-					player.getInventory().remove(Material.WOOD_SPADE);
-					player.sendMessage(ChatColor.GOLD + "You have canceled creating an arena");
-					return true;
-				}
-				else if (creating_lobby_players.contains(player.getName())) {
-					creating_lobby_players.remove(player.getName());
-					creating_lobby_ids.remove(player.getName());
-					player.getInventory().remove(Material.WOOD_SPADE);
-					player.sendMessage(ChatColor.GOLD + "You have canceled creating a lobby");
-					return true;
-				}
-				else if (creating_spawns_players.contains(player.getName())) {
-					creating_spawns_players.remove(player.getName());
-					creating_spawns_ids.remove(player.getName());
-					player.sendMessage(ChatColor.GOLD + "You have canceled setting a games spawn points");
-					return true;
-				}
-				else {
-					player.sendMessage(ChatColor.RED + "You aren't creating anything!");
-					return true;
-				}
+			if (!(sender instanceof Player)) {
+				sender.sendMessage(ChatColor.RED + "You must be a player to cancel");
+				return true;
 			} else {
-				sender.sendMessage(ChatColor.RED + "You have to be a player to cancel creating an arena/lobby");
+				EventHandle.callCancelCreatingCommandEvent((Player) sender);
 				return true;
 			}
 		}

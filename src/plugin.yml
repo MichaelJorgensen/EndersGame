@@ -11,6 +11,7 @@ commands:
 permissions:
     EndersGame.*:
         description: Gives access to all EndersGame permissions
+        default: true
         children:
             EndersGame.createsign: true
             EndersGame.create: true

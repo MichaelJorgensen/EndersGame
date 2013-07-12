@@ -16,10 +16,12 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.GameManager;
 import com.homie.endersgame.api.events.EventHandle;
+import com.homie.endersgame.runnable.RemovePlayer;
 
 public class GameListener implements Listener {
 
@@ -89,6 +91,14 @@ public class GameListener implements Listener {
 					e.printStackTrace();
 				}
 			}
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onPlayerLeave(PlayerQuitEvent event) {
+		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 7L);
+		if (event.getPlayer().hasPermission("EndersGame.create")) {
+			EventHandle.callCancelCreatingCommandEvent(event.getPlayer());
 		}
 	}
 	

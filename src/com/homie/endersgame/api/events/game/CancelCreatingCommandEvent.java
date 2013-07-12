@@ -5,14 +5,12 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class PlayerLeaveEndersGameEvent extends Event {
+public class CancelCreatingCommandEvent extends Event {
 
-	private int gameid;
 	private Player player;
 	private static final HandlerList handlers = new HandlerList();
 	
-	public PlayerLeaveEndersGameEvent(int gameid, Player player) {
-		this.gameid = gameid;
+	public CancelCreatingCommandEvent(Player player) {
 		this.player = player;
 	}
 	
@@ -23,11 +21,6 @@ public class PlayerLeaveEndersGameEvent extends Event {
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
-	
-	public int getGameId() {
-		return gameid;
-	}
-	
 	public Player getPlayer() {
 		return player;
 	}
