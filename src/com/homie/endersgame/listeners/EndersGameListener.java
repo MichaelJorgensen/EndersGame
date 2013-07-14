@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 
 import org.bukkit.ChatColor;
+import org.bukkit.GameMode;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -23,9 +24,11 @@ import com.homie.endersgame.api.events.game.PlayerJoinEndersGameEvent;
 
 public class EndersGameListener implements Listener {
 
+	private EndersGame plugin;
 	private GameManager gm;
 	
 	public EndersGameListener(EndersGame plugin) {
+		this.plugin = plugin;
 		this.gm = plugin.getGameManager();
 	}
 	
@@ -37,11 +40,16 @@ public class EndersGameListener implements Listener {
 		try {
 			Lobby l = gm.getLobby(game.getLobbyId());
 			if (!EndersGame.playing_players_inventory.containsKey(player.getName())) {
-				if (game.getGameStage() != GameStage.Lobby) {
-					player.sendMessage(ChatColor.RED + "Game is already in session");
+				if (game.getGameStage() == GameStage.Ingame) {
+					player.sendMessage(ChatColor.RED + "The game is already in session");
+					return;
+				}
+				if (game.getPlayerList().size() == plugin.getConfiguration().getMaxPlayers()) {
+					player.sendMessage(ChatColor.RED + "The game is full");
 					return;
 				}
 				EndersGame.playing_players_inventory.put(player.getName(), player.getInventory().getContents());
+				EndersGame.player_players_armor.put(player.getName(), player.getInventory().getArmorContents());
 				player.teleport(gm.getLobbySpawn(l.getLobbyId()));
 				player.getInventory().clear();
 				player.updateInventory();
@@ -52,14 +60,12 @@ public class EndersGameListener implements Listener {
 				
 				if (team1 > team2) {
 					playerlist.put(player.getName(), GameTeam.Team2);
-				}
-				else if (team1 < team2) {
-					playerlist.put(player.getName(), GameTeam.Team1);
 				} else {
 					playerlist.put(player.getName(), GameTeam.Team1);
 				}
 				
 				EndersGame.playing_players_gamemode.put(player.getName(), player.getGameMode());
+				player.setGameMode(GameMode.CREATIVE);
 				gm.updateGamePlayers(game.getGameId(), playerlist);
 				player.sendMessage(ChatColor.GREEN + "You have joined Arena " + game.getGameId() + ". You are on team " + playerlist.get(player.getName()).toNiceString() + ", and you are in the lobby");
 				return;
@@ -83,15 +89,17 @@ public class EndersGameListener implements Listener {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
 					player.teleport(player.getLocation().getWorld().getSpawnLocation());
+					player.setFlySpeed(0.1f);
+					player.setFlying(false);
 					player.getInventory().clear();
 					player.setGameMode(EndersGame.playing_players_gamemode.get(player.getName()));
 					player.getInventory().setContents(EndersGame.playing_players_inventory.get(player.getName()));
+					player.getInventory().setArmorContents(EndersGame.player_players_armor.get(player.getName()));
 					player.updateInventory();
 					EndersGame.playing_players_gamemode.remove(player.getName());
 					EndersGame.playing_players_inventory.remove(player.getName());
 					players.remove(player.getName());
 					gm.updateGamePlayers(i, players);
-					player.sendMessage(ChatColor.GREEN + "You have left arena " + i + " and your inventory has been reset.");
 					EventHandle.callPlayerLeaveEndersGameEvent(i, player);
 					event.setSuccess(true);
 					return;

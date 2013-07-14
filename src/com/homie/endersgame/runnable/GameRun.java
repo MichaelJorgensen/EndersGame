@@ -33,6 +33,10 @@ public class GameRun implements Runnable {
 					EndersGame.debug("Updating sign for game: " + game.getGameId());
 					sign.setLine(2, k + "/" + e);
 					sign.update();
+					if (g == 0) {
+						GameManageRun r = new GameManageRun(plugin, game.getGameId());
+						r.setId(plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, r, 10L, 20L));
+					}
 				}
 			}
 		} catch (SQLException e) {

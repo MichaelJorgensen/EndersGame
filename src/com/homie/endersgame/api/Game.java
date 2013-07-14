@@ -1,6 +1,8 @@
 package com.homie.endersgame.api;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 
 import org.bukkit.Location;
 
@@ -23,11 +25,12 @@ public class Game {
 	}
 	
 	public enum GameStage {
-		Lobby, Ingame, Endgame;
+		Lobby, PreGame, Ingame, Endgame;
 		
 		public static GameStage getFrom(String args) {
 			switch(args.toLowerCase()) {
 			case "lobby": return GameStage.Lobby;
+			case "pregame": return GameStage.PreGame;
 			case "ingame": return GameStage.Ingame;
 			case "endgame": return GameStage.Endgame;
 			default: return GameStage.Lobby;
@@ -38,6 +41,7 @@ public class Game {
 		public String toString() {
 			switch(this) {
 			case Endgame: return "Endgame";
+			case PreGame: return "PreGame";
 			case Ingame: return "Ingame";
 			case Lobby: return "Lobby";
 			default: return null;
@@ -110,6 +114,14 @@ public class Game {
 	
 	public HashMap<String, GameTeam> getPlayerList() {
 		return list;
+	}
+	
+	public ArrayList<String> getArrayListofPlayers() {
+		ArrayList<String> players = new ArrayList<String>();
+		for (Map.Entry<String, GameTeam> en : list.entrySet()) {
+			players.add(en.getKey());
+		}
+		return players;
 	}
 	
 	public void setPlayerList(HashMap<String, GameTeam> list) {

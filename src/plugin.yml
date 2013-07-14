@@ -1,5 +1,5 @@
 name: Enders Game
-version: 1.0
+version: 1.0 for 1.6.2 ONLY
 website: http://www.homieserver.com/index.php?forum/
 author: mike101102
 main: com.homie.endersgame.EndersGame
@@ -11,7 +11,7 @@ commands:
 permissions:
     EndersGame.*:
         description: Gives access to all EndersGame permissions
-        default: true
+        default: op
         children:
             EndersGame.createsign: true
             EndersGame.create: true
@@ -30,7 +30,7 @@ permissions:
         default: op
     EndersGame.join:
         description: Allows you to join a game/arena and leave
-        default: op
+        default: true
     EndersGame.override:
         description: Allows you to build in games/arenas and query the SQL server
         default: op

@@ -44,4 +44,8 @@ public class Config {
 	public int getMaxPlayers() {
 		return config.getInt("game.max-players", 24);
 	}
+	
+	public int getMinPercentToStart() {
+		return config.getInt("game.min-percent-to-start", 50);
+	}
 }

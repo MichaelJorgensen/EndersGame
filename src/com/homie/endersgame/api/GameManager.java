@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
@@ -65,7 +66,7 @@ public class GameManager {
 			int signID = Integer.parseInt(sign.getLine(1).split("Arena ")[1]);
 			Block b = getSign(signID);
 			return (sign.getX() == b.getX() && sign.getY() == b.getY() && sign.getZ() == b.getZ());
-		} catch (NumberFormatException | SQLException e) {
+		} catch (Exception e) {
 			return false;
 		}
 	}
@@ -106,6 +107,7 @@ public class GameManager {
 		EndersGame.debug("Registered new game, ID: " + gameid);
 	}
 	
+	@Deprecated
 	public void updateGame(Game game) throws SQLException {
 		int gameid = game.getGameId();
 		sql.query("UPDATE games SET gameid=" + game.getGameId() + " WHERE gameid=" + gameid);
@@ -127,13 +129,28 @@ public class GameManager {
 		if (rs == null) return null;
 		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
 		String players = rs.getString("players");
-		EndersGame.debug("Detected players for game " + gameid + ": " + players);
 		return plugin.convertPlayerListToHash(players);
+	}
+	
+	public ArrayList<String> getGamePlayerList(int gameid) throws SQLException {
+		ResultSet rs = sql.query("SELECT players FROM games WHERE gameid=" + gameid);
+		ArrayList<String> list = new ArrayList<String>();
+		if (rs == null) return list;
+		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
+		for (Map.Entry<String, GameTeam> en : plugin.convertPlayerListToHash(rs.getString("players")).entrySet()) {
+			list.add(en.getKey());
+		}
+		return list;
 	}
 	
 	public void updateGamePlayers(int gameid, HashMap<String, GameTeam> players) throws SQLException {
 		sql.query("UPDATE games SET players='" + plugin.convertPlayerListToString(players) + "' WHERE gameid=" + gameid);
 		EndersGame.debug("Updated player list for game " + gameid);
+	}
+	
+	public void updateGameStage(int gameid, GameStage stage) throws SQLException {
+		sql.query("UPDATE games SET gamestage='" + stage.toString() + "' WHERE gameid=" + gameid);
+		EndersGame.debug("Updated gamestage for game " + gameid);
 	}
 	
 	public ArrayList<String> getPlayersOnTeam(int gameid, GameTeam team) throws SQLException {
@@ -287,5 +304,44 @@ public class GameManager {
 			list.add(rs.getInt(1));
 		}
 		return list;
+	}
+	
+	public boolean isInsideCuboid(Location loc, Location l1, Location l2) {
+		int x = (int) loc.getX();
+		int y = (int) loc.getY();
+		int z = (int) loc.getZ();
+        int x1 = Math.min(l1.getBlockX(), l2.getBlockX());
+        int y1 = Math.min(l1.getBlockY(), l2.getBlockY());
+        int z1 = Math.min(l1.getBlockZ(), l2.getBlockZ());
+        int x2 = Math.max(l1.getBlockX(), l2.getBlockX());
+        int y2 = Math.max(l1.getBlockY(), l2.getBlockY());
+        int z2 = Math.max(l1.getBlockZ(), l2.getBlockZ());
+ 
+        return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
+	}
+	
+	public boolean sendGameMessage(int gameid, String message) {
+		try {
+			for (String i : getGamePlayerList(gameid)) {
+				plugin.getServer().getPlayer(i).sendMessage(ChatColor.GOLD + "[EndersGame] " + message);
+			}
+			return true;
+		} catch (SQLException | NullPointerException e) {
+			return false;
+		}
+	}
+	
+	public boolean sendTeamMessage(int gameid, GameTeam team, String message) {
+		try {
+			for (Map.Entry<String, GameTeam> en : getGamePlayers(gameid).entrySet()) {
+				if (en.getValue() == team) {
+					plugin.getServer().getPlayer(en.getKey()).sendMessage(ChatColor.GOLD + "[EndersGame] " + message);
+				}
+				return true;
+			}
+		} catch (SQLException | NullPointerException e) {
+			return false;
+		}
+		return false;
 	}
 }

@@ -43,6 +43,7 @@ public class EndersGame extends JavaPlugin {
 	private SignRun sr;
 	
 	public static HashMap<String, ItemStack[]> playing_players_inventory = new HashMap<String, ItemStack[]>();
+	public static HashMap<String, ItemStack[]> player_players_armor = new HashMap<String, ItemStack[]>();
 	public static HashMap<String, GameMode> playing_players_gamemode = new HashMap<String, GameMode>();
 	
 	public static ArrayList<String> creating_game_players = new ArrayList<String>();
@@ -73,12 +74,30 @@ public class EndersGame extends JavaPlugin {
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
 		getServer().getPluginManager().registerEvents(el, this);
 		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, sr, 75L, 8000L);
+		getServer().getScheduler().scheduleSyncRepeatingTask(this, sr, 75L, 1200L);
 		getServer().getScheduler().scheduleSyncRepeatingTask(this, new GameRun(this), 10L, 60L);
+		if (debug) getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable()
+		{
+			@Override
+			public void run() {
+				EndersGame.debug("Queries in the last minute: " + SQL.q);
+				SQL.resetCount();
+			}
+		}, 1200L, 1200L);
 	}
 	
 	public void onDisable() {
-		send("Ejecting all players from any arenas");
+		ejectAll();
+		send("Attempting to close SQL connection");
+		try {
+			sql.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void ejectAll() {
+		send("Attempting to eject all players from any arenas");
 		try {
 			for (Integer i : gm.getAllGamesFromDatabase()) {
 				HashMap<String, GameTeam> list = gm.getGamePlayers(i);
@@ -88,13 +107,6 @@ public class EndersGame extends JavaPlugin {
 				list.clear();
 				gm.updateGamePlayers(i, list);
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		
-		send("Attempting to close SQL connection");
-		try {
-			sql.close();
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}
@@ -169,6 +181,7 @@ public class EndersGame extends JavaPlugin {
 		if (s.hasPermission("EndersGame.create")) s.sendMessage(ChatColor.GOLD + "/eg setspawn [arena|lobby] [id]");
 		if (s.hasPermission("EndersGame.create")) s.sendMessage(ChatColor.GOLD + "/eg cancel");
 		if (s.hasPermission("EndersGame.delete")) s.sendMessage(ChatColor.GOLD + "/eg delete [arena|lobby] [id]");
+		if (s.hasPermission("EndersGame.override")) s.sendMessage(ChatColor.GOLD + "/eg ejectall - EJECTS ALL PLAYERS FROM ARENAS IN CASE OF ERROR");
 	}
 	
 	public HashMap<String, GameTeam> convertPlayerListToHash(String args) {
@@ -348,6 +361,17 @@ public class EndersGame extends JavaPlugin {
 			}
 		}
 		
+		else if (args[0].equalsIgnoreCase("ejectall")) {
+			if (sender.hasPermission("EndersGame.override")) {
+				ejectAll();
+				sender.sendMessage(ChatColor.RED + "All players ejected");
+				return true;
+			} else {
+				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.override)");
+				return true;
+			}
+		}
+		
 		else if (args[0].equalsIgnoreCase("setspawn")) {
 			if (sender.hasPermission("EndersGame.create")) {
 				if (sender instanceof Player) {
@@ -483,9 +507,7 @@ public class EndersGame extends JavaPlugin {
 							e.printStackTrace();
 							return true;
 						}
-					}
-					
-					else {
+					} else {
 						sender.sendMessage(ChatColor.GOLD + "/eg delete [arena|lobby] [id]");
 						return true;
 					}
@@ -498,6 +520,7 @@ public class EndersGame extends JavaPlugin {
 				return true;
 			}
 		}
-		return false;
+		help(sender);
+		return true;
 	}
 }

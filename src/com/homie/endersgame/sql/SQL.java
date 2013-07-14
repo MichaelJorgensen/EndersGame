@@ -14,6 +14,8 @@ import com.homie.endersgame.sql.options.SQLiteOptions;
 
 public class SQL {
 	
+	public static int q;
+	
 	private DatabaseOptions dop;
 	private Connection con;
 	
@@ -28,6 +30,10 @@ public class SQL {
 				e.printStackTrace();
 			}
 		}
+	}
+	
+	public static void resetCount() {
+		q = 0;
 	}
 	
 	public DatabaseOptions getDatabaseOptions() {
@@ -78,8 +84,8 @@ public class SQL {
 	public ResultSet query(String query) throws SQLException {
 		Statement st = null;
 		ResultSet rs = null;
-		EndersGame.debug("Query: " + query);
 		st = con.createStatement();
+		q++;
 		if (query.toLowerCase().contains("delete") || query.toLowerCase().contains("update") || query.toLowerCase().contains("insert")) {
 			st.executeUpdate(query);
 			return rs;

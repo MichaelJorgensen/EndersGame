@@ -8,18 +8,26 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.player.PlayerBucketEmptyEvent;
+import org.bukkit.event.player.PlayerCommandPreprocessEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.homie.endersgame.EndersGame;
+import com.homie.endersgame.api.Game;
 import com.homie.endersgame.api.GameManager;
+import com.homie.endersgame.api.Lobby;
 import com.homie.endersgame.api.events.EventHandle;
 import com.homie.endersgame.runnable.RemovePlayer;
 
@@ -37,7 +45,7 @@ public class GameListener implements Listener {
 	}
 	
 	@EventHandler(priority = EventPriority.NORMAL)
-	public void onBlockPlace(SignChangeEvent event) {
+	public void onSignChange(SignChangeEvent event) {
 		Player player = event.getPlayer();
 		String[] line = event.getLines();
 		int i;
@@ -77,6 +85,29 @@ public class GameListener implements Listener {
 	}
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onBlockPlace(BlockPlaceEvent event) {
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				Game game = gm.getGame(i);
+				if (gm.isInsideCuboid(player.getLocation(), game.getLocationOne(), game.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+			for (Integer i : gm.getAllLobbiesFromDatabase()) {
+				Lobby lobby = gm.getLobby(i);
+				if (gm.isInsideCuboid(player.getLocation(), lobby.getLocationOne(), lobby.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onBlockBreak(BlockBreakEvent event) {
 		Block b = event.getBlock();
 		if (b.getState() instanceof Sign) {
@@ -85,6 +116,7 @@ public class GameListener implements Listener {
 				try {
 					if (gm.getSign(Integer.parseInt(s.getLine(1).split("Arena ")[1])) != null && !event.isCancelled()) {
 						gm.unregisterSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]));
+						return;
 					}
 				} catch (NumberFormatException | IndexOutOfBoundsException | SQLException e) {
 					if (e.getMessage() != null && e.getMessage().equalsIgnoreCase("ResultSet closed")) return;
@@ -92,11 +124,110 @@ public class GameListener implements Listener {
 				}
 			}
 		}
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				Game game = gm.getGame(i);
+				if (gm.isInsideCuboid(player.getLocation(), game.getLocationOne(), game.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+			for (Integer i : gm.getAllLobbiesFromDatabase()) {
+				Lobby lobby = gm.getLobby(i);
+				if (gm.isInsideCuboid(player.getLocation(), lobby.getLocationOne(), lobby.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onPlayerDrop(PlayerDropItemEvent event) {
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				Game game = gm.getGame(i);
+				if (gm.isInsideCuboid(player.getLocation(), game.getLocationOne(), game.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+			for (Integer i : gm.getAllLobbiesFromDatabase()) {
+				Lobby lobby = gm.getLobby(i);
+				if (gm.isInsideCuboid(player.getLocation(), lobby.getLocationOne(), lobby.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onSnowallHit(EntityDamageByEntityEvent event) {
+		if (event.getEntity() instanceof Player && event.getDamager().getType() == EntityType.SNOWBALL) {
+			Player player = (Player) event.getEntity();
+			player.sendMessage(ChatColor.RED + "You've been hit");
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onBucketEmpty(PlayerBucketEmptyEvent event) {
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				Game game = gm.getGame(i);
+				if (gm.isInsideCuboid(player.getLocation(), game.getLocationOne(), game.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+			for (Integer i : gm.getAllLobbiesFromDatabase()) {
+				Lobby lobby = gm.getLobby(i);
+				if (gm.isInsideCuboid(player.getLocation(), lobby.getLocationOne(), lobby.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					return;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
+		if (event.getMessage().toLowerCase().startsWith("/eg leave")) return;
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				Game game = gm.getGame(i);
+				if (gm.isInsideCuboid(player.getLocation(), game.getLocationOne(), game.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					player.sendMessage(ChatColor.RED + "You can't use commands while in-game. To leave, use /eg leave");
+					return;
+				}
+			}
+			for (Integer i : gm.getAllLobbiesFromDatabase()) {
+				Lobby lobby = gm.getLobby(i);
+				if (gm.isInsideCuboid(player.getLocation(), lobby.getLocationOne(), lobby.getLocationTwo()) && !player.hasPermission("EndersGame.override")) {
+					event.setCancelled(true);
+					player.sendMessage(ChatColor.RED + "You can't use commands while in-game. To leave, use /eg leave");
+					return;
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	@EventHandler(priority = EventPriority.NORMAL)
 	public void onPlayerLeave(PlayerQuitEvent event) {
-		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 7L);
+		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 4L);
 		if (event.getPlayer().hasPermission("EndersGame.create")) {
 			EventHandle.callCancelCreatingCommandEvent(event.getPlayer());
 		}
