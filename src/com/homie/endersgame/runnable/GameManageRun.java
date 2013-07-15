@@ -72,7 +72,7 @@ public class GameManageRun implements Runnable {
 				timelimit++;
 				if (timelimit == 300) {
 					gm.sendGameMessage(gameid, "Time limit reached");
-					plugin.ejectAll();
+					plugin.eject(gameid);
 					return;
 				}
 				ingame_players = game.getArrayListofPlayers();
@@ -88,9 +88,21 @@ public class GameManageRun implements Runnable {
 				ArrayList<String> team1spawn = gm.getPlayersInTeamSpawn(gamespawns.get(0), 4);
 				ArrayList<String> team2spawn = gm.getPlayersInTeamSpawn(gamespawns.get(1), 4);
 				ArrayList<String> team1 = gm.getPlayersOnTeam(gameid, GameTeam.Team1);
-				team1.add(gm.getPlayersOnTeam(gameid, GameTeam.Team1Leader).get(0));
+				ArrayList<String> team1leader = gm.getPlayersOnTeam(gameid, GameTeam.Team1Leader);
 				ArrayList<String> team2 = gm.getPlayersOnTeam(gameid, GameTeam.Team2);
-				team2.add(gm.getPlayersOnTeam(gameid, GameTeam.Team2Leader).get(0));
+				ArrayList<String> team2leader = gm.getPlayersOnTeam(gameid, GameTeam.Team2Leader);
+				if (team1.size() + team1leader.size() == 0) {
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, all Team 1 players have left");
+					plugin.eject(gameid);
+					return;
+				}
+				if (team2.size() + team2leader.size() == 0) {
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, all Team 2 players have left");
+					plugin.eject(gameid);
+					return;
+				}
+				team1.add(team1leader.get(0));
+				team2.add(team2leader.get(0));
 				ArrayList<String> remove_from_t1_spawn = new ArrayList<String>();
 				ArrayList<String> remove_from_t2_spawn = new ArrayList<String>();
 				for (String p : team1spawn) {
@@ -116,13 +128,13 @@ public class GameManageRun implements Runnable {
 				if (t1win < 1) t1win = 1;
 				if (t2win < 1) t2win = 1;
 				if (team1spawn.size() >= t1win) {
-					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, at least " + perToWin + "% of their team is in the enemy spawn");
-					plugin.ejectAll();
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
+					plugin.eject(gameid);
 					return;
 				}
 				if (team2spawn.size() >= t2win) {
-					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, at least " + perToWin + "% of their team is in the enemy spawn");
-					plugin.ejectAll();
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
+					plugin.eject(gameid);
 					return;
 				}
 				Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
@@ -246,7 +258,7 @@ public class GameManageRun implements Runnable {
 					gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + l1.getDisplayName() + ChatColor.DARK_GREEN + " and " + l2.getDisplayName() + ChatColor.DARK_GREEN + " are team 1 and team 2 leaders respectively");
 					gm.sendGameMessage(gameid, ChatColor.RED + "Each team now has 1 minute with their leader to discuss battle plans," + ChatColor.BOLD + " the other team can't see your messages");
 				}
-				if (wait == 10) {
+				if (wait == 10 && game.getGameStage() == GameStage.Lobby) {
 					gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Waiting for more players...");
 					wait = 0;
 				}

@@ -112,6 +112,20 @@ public class EndersGame extends JavaPlugin {
 		}
 	}
 	
+	public void eject(int gameid) {
+		send("Attempting to eject all players from arena " + gameid);
+		try {
+			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
+			for (Map.Entry<String, GameTeam> en : list.entrySet()) {
+				el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
+			}
+			list.clear();
+			gm.updateGamePlayers(gameid, list);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
 	private boolean setupSQL() {
 		if (config.getSQLValue().equalsIgnoreCase("MySQL")) {
 			dop = new MySQLOptions(config.getHostname(), config.getPort(), config.getDatabase(), config.getUsername(), config.getPassword());

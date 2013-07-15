@@ -2,12 +2,13 @@ package com.homie.endersgame.runnable;
 
 import java.sql.SQLException;
 
+import org.bukkit.ChatColor;
 import org.bukkit.block.Sign;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game;
-import com.homie.endersgame.api.GameManager;
 import com.homie.endersgame.api.Game.GameStage;
+import com.homie.endersgame.api.GameManager;
 
 public class GameRun implements Runnable {
 
@@ -34,6 +35,16 @@ public class GameRun implements Runnable {
 					game.setGameStage(GameStage.Lobby);
 					gm.updateGameStage(i, game.getGameStage());
 				}
+				if (GameStage.getFrom(sign.getLine(3)) != game.getGameStage()) {
+					sign.setLine(3, game.getGameStage().toString());
+				}
+				if (game.getGameStage() == GameStage.Ingame || k == q) {
+					sign.setLine(0, ChatColor.DARK_RED + "Ender's Game");
+				}
+				if (game.getGameStage() == GameStage.Lobby || game.getGameStage() == GameStage.PreGame) {
+					sign.setLine(0, ChatColor.DARK_GREEN + "Ender's Game");
+				}
+				sign.update();
 				if (g != k || q != e) {
 					EndersGame.debug("Updating sign for game: " + game.getGameId());
 					sign.setLine(2, k + "/" + e);

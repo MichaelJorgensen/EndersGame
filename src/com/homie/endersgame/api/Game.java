@@ -25,14 +25,13 @@ public class Game {
 	}
 	
 	public enum GameStage {
-		Lobby, PreGame, Ingame, Endgame;
+		Lobby, PreGame, Ingame;
 		
 		public static GameStage getFrom(String args) {
 			switch(args.toLowerCase()) {
 			case "lobby": return GameStage.Lobby;
 			case "pregame": return GameStage.PreGame;
 			case "ingame": return GameStage.Ingame;
-			case "endgame": return GameStage.Endgame;
 			default: return GameStage.Lobby;
 			}
 		}
@@ -40,7 +39,6 @@ public class Game {
 		@Override
 		public String toString() {
 			switch(this) {
-			case Endgame: return "Endgame";
 			case PreGame: return "PreGame";
 			case Ingame: return "Ingame";
 			case Lobby: return "Lobby";

@@ -68,7 +68,7 @@ public class GameListener implements Listener {
 						event.setLine(0, ChatColor.DARK_RED + "Ender's Game");
 						event.setLine(1, "Arena " + i);
 						event.setLine(2, "0/" + plugin.getEnderConfig().getMaxPlayers());
-						event.setLine(3, "Do Not Edit");
+						event.setLine(3, "Lobby");
 						try {
 							gm.registerSign(event.getBlock(), i);
 						} catch (SQLException e) {
@@ -179,7 +179,6 @@ public class GameListener implements Listener {
 	public void onPlayerMove(PlayerMoveEvent event) {
 		if (players_hit.containsKey(event.getPlayer().getName())) {
 			event.setCancelled(true);
-			event.getPlayer().sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you can't move!");
 		}
 	}
 	
@@ -191,7 +190,17 @@ public class GameListener implements Listener {
 				if (e.get(0) instanceof Player) {
 					Player player = (Player) e.get(0);
 					if (!players_hit.containsKey(player.getName())) {
-						players_hit.put(player.getName(), 0);
+						try {
+							for (Integer i : gm.getAllGamesFromDatabase()) {
+								if (gm.getGamePlayerList(i).contains(player.getName())) {
+									players_hit.put(player.getName(), 0);
+									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move or shoot for 3 seconds");
+									return;
+								}
+							}
+						} catch (SQLException g) {
+							g.printStackTrace();
+						}
 					}
 				}
 			}
@@ -298,7 +307,6 @@ public class GameListener implements Listener {
 		if (players_hit.containsKey(name)) {
 			if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 				if (player.getItemInHand().getType() == Material.SNOW_BALL) {
-					player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you can't shoot back!");
 					event.setCancelled(true);
 					return;
 				}

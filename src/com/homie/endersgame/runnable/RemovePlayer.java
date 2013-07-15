@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
 import org.bukkit.inventory.PlayerInventory;
 
 import com.github.one4me.ImprovedOfflinePlayer;
@@ -34,8 +35,13 @@ public class RemovePlayer implements Runnable {
 						player.setLocation(player.getLocation().getWorld().getSpawnLocation());
 						PlayerInventory in = player.getInventory();
 						in.clear();
-						player.setGameMode(EndersGame.playing_players_gamemode.get(name));
-						in.setContents(EndersGame.playing_players_inventory.get(name));
+						try {
+							in.setContents(EndersGame.playing_players_inventory.get(name));
+							in.setArmorContents(EndersGame.player_players_armor.get(name));
+							player.setGameMode(EndersGame.playing_players_gamemode.get(name));
+						} catch (Exception e) {
+							player.setGameMode(GameMode.SURVIVAL);
+						}
 						player.setInventory(in);
 						EndersGame.playing_players_gamemode.remove(name);
 						EndersGame.playing_players_inventory.remove(name);
