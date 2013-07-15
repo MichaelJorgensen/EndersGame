@@ -7,6 +7,7 @@ import org.bukkit.block.Sign;
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game;
 import com.homie.endersgame.api.GameManager;
+import com.homie.endersgame.api.Game.GameStage;
 
 public class GameRun implements Runnable {
 
@@ -29,6 +30,10 @@ public class GameRun implements Runnable {
 				int k = game.getPlayerList().size();
 				int e = plugin.getConfiguration().getMaxPlayers();
 				int q = Integer.parseInt(u.split("/")[1]);
+				if (k == 0 && game.getGameStage() != GameStage.Lobby) {
+					game.setGameStage(GameStage.Lobby);
+					gm.updateGameStage(i, game.getGameStage());
+				}
 				if (g != k || q != e) {
 					EndersGame.debug("Updating sign for game: " + game.getGameId());
 					sign.setLine(2, k + "/" + e);

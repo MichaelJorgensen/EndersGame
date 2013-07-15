@@ -48,4 +48,8 @@ public class Config {
 	public int getMinPercentToStart() {
 		return config.getInt("game.min-percent-to-start", 50);
 	}
+	
+	public int getPercentInSpawnToWin() {
+		return config.getInt("game.percent-in-spawn-to-win", 20);
+	}
 }

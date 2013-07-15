@@ -9,4 +9,5 @@ mysql:
     password: password
 game:
     max-players: 24
-    min-percent-to-start: 50
+    min-percent-to-start: 25
+    percent-in-spawn-to-win: 20

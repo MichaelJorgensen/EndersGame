@@ -88,6 +88,7 @@ public class EndersGameListener implements Listener {
 			for (Integer i : gm.getAllGamesFromDatabase()) {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
+					GameListener.players_hit.remove(player.getName());
 					player.teleport(player.getLocation().getWorld().getSpawnLocation());
 					player.setFlySpeed(0.1f);
 					player.setFlying(false);

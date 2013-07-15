@@ -8,11 +8,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Player;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game.GameStage;
@@ -318,6 +320,40 @@ public class GameManager {
         int z2 = Math.max(l1.getBlockZ(), l2.getBlockZ());
  
         return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
+	}
+	
+	public ArrayList<String> getPlayersInTeamSpawn(Location center, int radius) {
+		ArrayList<String> playerSet = new ArrayList<String>();
+		for(Player p : Bukkit.getServer().getOnlinePlayers()){
+			Location point1 = new Location(center.getWorld(), center.getX() - radius, center.getY() - radius, center.getZ() - radius);
+			Location point2 = new Location(center.getWorld(), center.getX() + radius, center.getY() + radius, center.getZ() + radius);
+			double x1 = point1.getX(), x2 = point2.getX(),
+			y1 = point1.getY(), y2 = point2.getY(),
+			z1 = point1.getZ(), z2 = point2.getZ(),
+			px = p.getLocation().getX(),
+			py = p.getLocation().getY(),
+			pz = p.getLocation().getZ();
+			if((((py <= y1) && 
+				(py >= y2)) || 
+				((py >= y1) && 
+				(py <= y2))) && 
+				(((pz <= z1) && 
+				(pz >= z2)) || 
+				((pz >= z1) && 
+				(pz <= z2)))  &&  
+				(((px <= x1) && 
+				(px >= x2)) || 
+				((px >= x1) && 
+				(px <= x2))) && 
+				(((px <= x1) && 
+				(px >= x2)) || 
+				((px >= x1) && 
+				(px <= x2)))){
+				playerSet.add(p.getName());
+				}	
+		}
+		
+		return playerSet;
 	}
 	
 	public boolean sendGameMessage(int gameid, String message) {

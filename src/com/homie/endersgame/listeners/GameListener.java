@@ -2,12 +2,15 @@ package com.homie.endersgame.listeners;
 
 import java.sql.SQLException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -17,15 +20,18 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game;
+import com.homie.endersgame.api.Game.GameTeam;
 import com.homie.endersgame.api.GameManager;
 import com.homie.endersgame.api.Lobby;
 import com.homie.endersgame.api.events.EventHandle;
@@ -38,6 +44,7 @@ public class GameListener implements Listener {
 	
 	public static HashMap<String, Location> creating_game_locations = new HashMap<String, Location>();
 	public static HashMap<String, Location> creating_lobby_locations = new HashMap<String, Location>();
+	public static HashMap<String, Integer> players_hit = new HashMap<String, Integer>();
 	
 	public GameListener(EndersGame plugin) {
 		this.plugin = plugin;
@@ -168,11 +175,62 @@ public class GameListener implements Listener {
 		}
 	}
 	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onPlayerMove(PlayerMoveEvent event) {
+		if (players_hit.containsKey(event.getPlayer().getName())) {
+			event.setCancelled(true);
+			event.getPlayer().sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you can't move!");
+		}
+	}
+	
 	@EventHandler(priority = EventPriority.NORMAL)
-	public void onSnowallHit(EntityDamageByEntityEvent event) {
-		if (event.getEntity() instanceof Player && event.getDamager().getType() == EntityType.SNOWBALL) {
-			Player player = (Player) event.getEntity();
-			player.sendMessage(ChatColor.RED + "You've been hit");
+	public void onSnowallHit(ProjectileHitEvent event) {
+		if (event.getEntity().getType() == EntityType.SNOWBALL) {
+			List<Entity> e = event.getEntity().getNearbyEntities(1, 1, 1);
+			if (!e.isEmpty()) {
+				if (e.get(0) instanceof Player) {
+					Player player = (Player) e.get(0);
+					if (!players_hit.containsKey(player.getName())) {
+						players_hit.put(player.getName(), 0);
+					}
+				}
+			}
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void onPlayerChat(AsyncPlayerChatEvent event) {
+		Player player = event.getPlayer();
+		try {
+			for (Integer i : gm.getAllGamesFromDatabase()) {
+				if (gm.getGamePlayers(i).containsKey(player.getName())) {
+					HashMap<String, GameTeam> pl = gm.getGamePlayers(i);
+					GameTeam pteam = pl.get(player.getName());
+					if (pteam == GameTeam.Team1) {
+						event.setMessage(ChatColor.AQUA + "[Team1] " + ChatColor.RESET + event.getMessage());
+					}
+					else if (pteam == GameTeam.Team1Leader) {
+						event.setMessage(ChatColor.BLUE + "[Leader] " + ChatColor.RESET + event.getMessage());
+					}
+					else if (pteam == GameTeam.Team2) {
+						event.setMessage(ChatColor.RED + "[Team2] " + ChatColor.RESET + event.getMessage());
+					}
+					else if (pteam == GameTeam.Team2Leader) {
+						event.setMessage(ChatColor.DARK_RED + "[Leader] " + ChatColor.RESET + event.getMessage());
+					}
+					for (Map.Entry<String, GameTeam> en : pl.entrySet()) {
+						if (en.getValue() != pteam) {
+							if (pteam == GameTeam.Team1 && en.getValue() == GameTeam.Team1Leader) continue;
+							if (pteam == GameTeam.Team1Leader && en.getValue() == GameTeam.Team1) continue;
+							if (pteam == GameTeam.Team2 && en.getValue() == GameTeam.Team2Leader) continue;
+							if (pteam == GameTeam.Team2Leader && en.getValue() == GameTeam.Team2) continue;
+							event.getRecipients().remove(plugin.getServer().getPlayer(en.getKey()));
+						}
+					}
+				}
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
 		}
 	}
 	
