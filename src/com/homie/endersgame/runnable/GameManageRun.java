@@ -14,6 +14,10 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
 
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game;
@@ -121,9 +125,18 @@ public class GameManageRun implements Runnable {
 					plugin.ejectAll();
 					return;
 				}
+				Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
+				Objective obj = board.registerNewObjective("spawnscore", "spawn");
+				obj.setDisplayName("In Enemy Spawn");
+				obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+				Score bluescore = obj.getScore(Bukkit.getOfflinePlayer(ChatColor.BLUE + "In Spawn:"));
+				Score redscore = obj.getScore(Bukkit.getOfflinePlayer(ChatColor.RED + "In Spawn:"));
+				bluescore.setScore(team2spawn.size());
+				redscore.setScore(team1spawn.size());
 				for (String i : ingame_players) {
 					Player player = plugin.getServer().getPlayer(i);
 					if (player == null) continue;
+					player.setScoreboard(board);
 					if (player.getLocation().getBlock().getRelative(BlockFace.DOWN).getType() != Material.AIR && !player.isFlying()) {
 						player.teleport(new Location(player.getWorld(), player.getLocation().getX(), player.getLocation().getY()+2, player.getLocation().getZ(),
 								player.getLocation().getYaw(), player.getLocation().getPitch()));

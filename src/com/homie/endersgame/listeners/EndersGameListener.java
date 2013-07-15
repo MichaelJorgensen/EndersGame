@@ -3,6 +3,7 @@ package com.homie.endersgame.listeners;
 import java.sql.SQLException;
 import java.util.HashMap;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Material;
@@ -89,6 +90,7 @@ public class EndersGameListener implements Listener {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
 					GameListener.players_hit.remove(player.getName());
+					player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
 					player.teleport(player.getLocation().getWorld().getSpawnLocation());
 					player.setFlySpeed(0.1f);
 					player.setFlying(false);

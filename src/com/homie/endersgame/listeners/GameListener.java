@@ -295,6 +295,15 @@ public class GameListener implements Listener {
 	public void onPlayerInteract(PlayerInteractEvent event) {
 		Player player = event.getPlayer();
 		String name = player.getName();
+		if (players_hit.containsKey(name)) {
+			if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+				if (player.getItemInHand().getType() == Material.SNOW_BALL) {
+					player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you can't shoot back!");
+					event.setCancelled(true);
+					return;
+				}
+			}
+		}
 		if (EndersGame.creating_game_players.contains(name) || EndersGame.creating_lobby_players.contains(name)) {
 			if (event.getItem() != null && event.getItem().getType() == Material.WOOD_SPADE) {
 				if (event.getAction() == Action.RIGHT_CLICK_BLOCK) {
