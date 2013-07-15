@@ -140,7 +140,7 @@ public class GameManageRun implements Runnable {
 				if (lobbWait == 30) {
 					gm.sendGameMessage(gameid, ChatColor.RED + "30 seconds left");
 				}
-				if (lobbWait == 15) {
+				if (lobbWait == 60) {
 					begin = true;
 					lobbWait = 0;
 				}
