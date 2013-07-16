@@ -68,12 +68,9 @@ public class GameManageRun implements Runnable {
 			Game game = gm.getGame(gameid);
 			if (game.getPlayerList().size() == 0) {
 				gm.updateGameStage(gameid, GameStage.Lobby);
-				for (Block b : gate_blocks) {
-					if (b.getType() == Material.REDSTONE_BLOCK) {
-						game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
-					} else {
-						gate_blocks.remove(b);
-					}
+				for (int i = 0; i < gate_blocks.size(); i++) {
+					Block b = gate_blocks.get(i);
+					game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
 				}
 				Bukkit.getScheduler().cancelTask(id);
 				return;
@@ -82,16 +79,16 @@ public class GameManageRun implements Runnable {
 			if (game.getGameStage() == GameStage.Ingame) {
 				if (openDoors < 10) {
 					gm.sendGameMessage(gameid, ChatColor.RED + "Opening doors in " + ChatColor.GOLD + (10-openDoors));
+					openDoors++;
 					return;
 				}
 				if (openDoors == 10 && !doors) {
-					for (Block b : gate_blocks) {
-						if (b.getType() == Material.REDSTONE_BLOCK) {
-							game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.AIR);
-						} else {
-							gate_blocks.remove(b);
-						}
+					for (int i = 0; i < gate_blocks.size(); i++) {
+						Block b = gate_blocks.get(i);
+						game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.AIR);
 					}
+					EndersGame.debug("gate_blocks now: " + gate_blocks.size());
+					doors = true;
 					gm.sendGameMessage(gameid, ChatColor.GREEN + "The gates are open!");
 				}
 				timelimit++;
@@ -255,7 +252,8 @@ public class GameManageRun implements Runnable {
 					player.getInventory().setContents(def);
 				}
 				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
-				gate_blocks = gm.getBlocksInRegion(game.getLocationOne(), game.getLocationTwo());
+				gate_blocks = gm.blocksFromTwoPoints(game.getLocationOne(), game.getLocationTwo());
+				EndersGame.debug("gate_blocks length: " + gate_blocks.size());
 				return;
 			}
 			if (game.getGameStage() == GameStage.Lobby) {

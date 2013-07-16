@@ -11,6 +11,7 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -360,29 +361,37 @@ public class GameManager {
 	}
 	
 	/**
-	 * @author Adamki11s
+	 * @author Quackster
 	 */
-	public ArrayList<Block> getBlocksInRegion(Location point1, Location point2) {
-		ArrayList<Block> al = new ArrayList<Block>();
-		double x1 = point1.getX(), x2 = point2.getX(),
-		    y1 = point1.getY(), y2 = point2.getY(),
-		    z1 = point1.getZ(), z2 = point2.getZ(), tmp = 0;
-		World w = point1.getWorld();
-
-		if(x2 > x1){ tmp = x2; x2 = x1; x1 = tmp; }
-		if(y2 > y1){ tmp = y2; y2 = y1; y1 = tmp; }
-		if(z2 > z1){ tmp = z2; z2 = z1; z1 = tmp; }
-
-		for(double x = x1 - x2; x <= x2; x++){
-			for(double y = y1 - y2; y <= y2; y++){
-				for(double z = z1 - z2; z <= z2; z++){
-					Location construct = new Location(w, x2 + x, y2 + y, z2 + z);
-					al.add(w.getBlockAt(construct));//This should add every block in the 3x3 cube, putting 9 blocks in the ArrayList.
-				}
-			}
-		}
-		return al;
-	}
+	public ArrayList<Block> blocksFromTwoPoints(Location loc1, Location loc2)
+    {
+        ArrayList<Block> blocks = new ArrayList<Block>();
+ 
+        int topBlockX = (loc1.getBlockX() < loc2.getBlockX() ? loc2.getBlockX() : loc1.getBlockX());
+        int bottomBlockX = (loc1.getBlockX() > loc2.getBlockX() ? loc2.getBlockX() : loc1.getBlockX());
+ 
+        int topBlockY = (loc1.getBlockY() < loc2.getBlockY() ? loc2.getBlockY() : loc1.getBlockY());
+        int bottomBlockY = (loc1.getBlockY() > loc2.getBlockY() ? loc2.getBlockY() : loc1.getBlockY());
+ 
+        int topBlockZ = (loc1.getBlockZ() < loc2.getBlockZ() ? loc2.getBlockZ() : loc1.getBlockZ());
+        int bottomBlockZ = (loc1.getBlockZ() > loc2.getBlockZ() ? loc2.getBlockZ() : loc1.getBlockZ());
+ 
+        for(int x = bottomBlockX; x <= topBlockX; x++)
+        {
+            for(int z = bottomBlockZ; z <= topBlockZ; z++)
+            {
+                for(int y = bottomBlockY; y <= topBlockY; y++)
+                {
+                    Block block = loc1.getWorld().getBlockAt(x, y, z);
+                    if (block.getType() == Material.REDSTONE_BLOCK) {
+                        blocks.add(block);
+                    }
+                }
+            }
+        }
+       
+        return blocks;
+    }
 	
 	public boolean sendGameMessage(int gameid, String message) {
 		try {
