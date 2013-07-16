@@ -11,6 +11,7 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
@@ -322,6 +323,9 @@ public class GameManager {
         return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
 	}
 	
+	/**
+	 * @author Adamki11s
+	 */
 	public ArrayList<String> getPlayersInTeamSpawn(Location center, int radius) {
 		ArrayList<String> playerSet = new ArrayList<String>();
 		for(Player p : Bukkit.getServer().getOnlinePlayers()){
@@ -355,6 +359,39 @@ public class GameManager {
 		
 		return playerSet;
 	}
+	
+	/**
+	 * @author Quackster
+	 */
+	public ArrayList<Block> blocksFromTwoPoints(Location loc1, Location loc2)
+    {
+        ArrayList<Block> blocks = new ArrayList<Block>();
+ 
+        int topBlockX = (loc1.getBlockX() < loc2.getBlockX() ? loc2.getBlockX() : loc1.getBlockX());
+        int bottomBlockX = (loc1.getBlockX() > loc2.getBlockX() ? loc2.getBlockX() : loc1.getBlockX());
+ 
+        int topBlockY = (loc1.getBlockY() < loc2.getBlockY() ? loc2.getBlockY() : loc1.getBlockY());
+        int bottomBlockY = (loc1.getBlockY() > loc2.getBlockY() ? loc2.getBlockY() : loc1.getBlockY());
+ 
+        int topBlockZ = (loc1.getBlockZ() < loc2.getBlockZ() ? loc2.getBlockZ() : loc1.getBlockZ());
+        int bottomBlockZ = (loc1.getBlockZ() > loc2.getBlockZ() ? loc2.getBlockZ() : loc1.getBlockZ());
+ 
+        for(int x = bottomBlockX; x <= topBlockX; x++)
+        {
+            for(int z = bottomBlockZ; z <= topBlockZ; z++)
+            {
+                for(int y = bottomBlockY; y <= topBlockY; y++)
+                {
+                    Block block = loc1.getWorld().getBlockAt(x, y, z);
+                    if (block.getType() == Material.REDSTONE_BLOCK) {
+                        blocks.add(block);
+                    }
+                }
+            }
+        }
+       
+        return blocks;
+    }
 	
 	public boolean sendGameMessage(int gameid, String message) {
 		try {
