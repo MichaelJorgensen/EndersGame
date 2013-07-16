@@ -178,7 +178,7 @@ public class GameListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerMove(PlayerMoveEvent event) {
-		if (players_hit.containsKey(event.getPlayer().getName()) && new Random().nextInt(2) == 0) {
+		if (players_hit.containsKey(event.getPlayer().getName())) {
 			event.setCancelled(true);
 		}
 	}
@@ -307,7 +307,7 @@ public class GameListener implements Listener {
 		String name = player.getName();
 		if (players_hit.containsKey(name)) {
 			if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-				if (player.getItemInHand().getType() == Material.SNOW_BALL) {
+				if (player.getItemInHand().getType() == Material.SNOW_BALL && new Random().nextInt(2) == 0) {
 					event.setCancelled(true);
 					return;
 				}
