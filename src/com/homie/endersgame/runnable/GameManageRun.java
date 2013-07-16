@@ -10,6 +10,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -35,6 +36,7 @@ public class GameManageRun implements Runnable {
 	
 	private ArrayList<String> ingame_players = new ArrayList<String>();
 	private ArrayList<Location> gamespawns = new ArrayList<Location>();
+	private ArrayList<Block> gate_blocks = new ArrayList<Block>();
 	private ItemStack[] definv;
 	private int max;
 	private int per;
@@ -43,7 +45,9 @@ public class GameManageRun implements Runnable {
 	private int wait = 9;
 	private int lobbWait = 0;
 	private int timelimit = 0;
+	private int openDoors = 0;
 	private boolean begin = false;
+	private boolean doors = false;
 	
 	public GameManageRun(EndersGame plugin, int gameid) {
 		this.plugin = plugin;
@@ -64,11 +68,32 @@ public class GameManageRun implements Runnable {
 			Game game = gm.getGame(gameid);
 			if (game.getPlayerList().size() == 0) {
 				gm.updateGameStage(gameid, GameStage.Lobby);
+				for (Block b : gate_blocks) {
+					if (b.getType() == Material.REDSTONE_BLOCK) {
+						game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
+					} else {
+						gate_blocks.remove(b);
+					}
+				}
 				Bukkit.getScheduler().cancelTask(id);
 				return;
 			}
 			if (gamespawns.isEmpty()) gamespawns = gm.getGameSpawns(gameid);
 			if (game.getGameStage() == GameStage.Ingame) {
+				if (openDoors < 10) {
+					gm.sendGameMessage(gameid, ChatColor.RED + "Opening doors in " + ChatColor.GOLD + (10-openDoors));
+					return;
+				}
+				if (openDoors == 10 && !doors) {
+					for (Block b : gate_blocks) {
+						if (b.getType() == Material.REDSTONE_BLOCK) {
+							game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.AIR);
+						} else {
+							gate_blocks.remove(b);
+						}
+					}
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "The gates are open!");
+				}
 				timelimit++;
 				if (timelimit == 300) {
 					gm.sendGameMessage(gameid, "Time limit reached");
@@ -150,7 +175,7 @@ public class GameManageRun implements Runnable {
 					if (player == null) continue;
 					player.setScoreboard(board);
 					if (player.getLocation().getBlock().getRelative(BlockFace.DOWN).getType() != Material.AIR && !player.isFlying()) {
-						player.teleport(new Location(player.getWorld(), player.getLocation().getX(), player.getLocation().getY()+2, player.getLocation().getZ(),
+						player.teleport(new Location(player.getWorld(), player.getLocation().getX(), player.getLocation().getY()+1, player.getLocation().getZ(),
 								player.getLocation().getYaw(), player.getLocation().getPitch()));
 						player.setFlying(true);
 					}
@@ -229,7 +254,9 @@ public class GameManageRun implements Runnable {
 					player.getInventory().setHelmet(new ItemStack(Material.WOOL, 1, (byte) 14));
 					player.getInventory().setContents(def);
 				}
-				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Get to their spawn, don't let them get to your's!");
+				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
+				gate_blocks = gm.getBlocksInRegion(game.getLocationOne(), game.getLocationTwo());
+				return;
 			}
 			if (game.getGameStage() == GameStage.Lobby) {
 				wait++;

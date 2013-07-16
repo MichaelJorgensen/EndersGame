@@ -322,6 +322,9 @@ public class GameManager {
         return x >= x1 && x <= x2 && y >= y1 && y <= y2 && z >= z1 && z <= z2;
 	}
 	
+	/**
+	 * @author Adamki11s
+	 */
 	public ArrayList<String> getPlayersInTeamSpawn(Location center, int radius) {
 		ArrayList<String> playerSet = new ArrayList<String>();
 		for(Player p : Bukkit.getServer().getOnlinePlayers()){
@@ -354,6 +357,31 @@ public class GameManager {
 		}
 		
 		return playerSet;
+	}
+	
+	/**
+	 * @author Adamki11s
+	 */
+	public ArrayList<Block> getBlocksInRegion(Location point1, Location point2) {
+		ArrayList<Block> al = new ArrayList<Block>();
+		double x1 = point1.getX(), x2 = point2.getX(),
+		    y1 = point1.getY(), y2 = point2.getY(),
+		    z1 = point1.getZ(), z2 = point2.getZ(), tmp = 0;
+		World w = point1.getWorld();
+
+		if(x2 > x1){ tmp = x2; x2 = x1; x1 = tmp; }
+		if(y2 > y1){ tmp = y2; y2 = y1; y1 = tmp; }
+		if(z2 > z1){ tmp = z2; z2 = z1; z1 = tmp; }
+
+		for(double x = x1 - x2; x <= x2; x++){
+			for(double y = y1 - y2; y <= y2; y++){
+				for(double z = z1 - z2; z <= z2; z++){
+					Location construct = new Location(w, x2 + x, y2 + y, z2 + z);
+					al.add(w.getBlockAt(construct));//This should add every block in the 3x3 cube, putting 9 blocks in the ArrayList.
+				}
+			}
+		}
+		return al;
 	}
 	
 	public boolean sendGameMessage(int gameid, String message) {
