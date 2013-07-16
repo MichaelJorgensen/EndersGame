@@ -4,6 +4,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -177,7 +178,7 @@ public class GameListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerMove(PlayerMoveEvent event) {
-		if (players_hit.containsKey(event.getPlayer().getName())) {
+		if (players_hit.containsKey(event.getPlayer().getName()) && new Random().nextInt(2) == 0) {
 			event.setCancelled(true);
 		}
 	}

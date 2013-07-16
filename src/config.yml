@@ -8,6 +8,6 @@ mysql:
     username: minecraft
     password: password
 game:
-    max-players: 24
-    min-percent-to-start: 25
+    max-players: 12
+    min-percent-to-start: 40
     percent-in-spawn-to-win: 20
