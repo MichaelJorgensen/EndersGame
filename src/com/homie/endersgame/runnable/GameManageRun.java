@@ -67,7 +67,7 @@ public class GameManageRun implements Runnable {
 	public void resetDoor(Game game) {
 		for (int i = 0; i < gate_blocks.size(); i++) {
 			Block b = gate_blocks.get(i);
-			game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
+			game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.GLOWSTONE);
 		}
 	}
 	
@@ -205,7 +205,8 @@ public class GameManageRun implements Runnable {
 					Player player = plugin.getServer().getPlayer(i);
 					if (player == null) continue;
 					player.setScoreboard(board);
-					if (player.getLocation().getBlock().getRelative(BlockFace.DOWN).getType() != Material.AIR && !player.isFlying()) {
+					Material below = player.getLocation().getBlock().getRelative(BlockFace.DOWN).getType();
+					if (below != Material.AIR && below != Material.OBSIDIAN && below != Material.REDSTONE_LAMP_ON && below != Material.REDSTONE_LAMP_OFF && !player.isFlying()) {
 						player.teleport(new Location(player.getWorld(), player.getLocation().getX(), player.getLocation().getY()+1, player.getLocation().getZ(),
 								player.getLocation().getYaw(), player.getLocation().getPitch()));
 						player.setFlying(true);

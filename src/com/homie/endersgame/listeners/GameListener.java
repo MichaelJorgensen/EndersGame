@@ -159,7 +159,7 @@ public class GameListener implements Listener {
 	@EventHandler(priority = EventPriority.NORMAL)
 	public void onSnowallHit(ProjectileHitEvent event) {
 		if (event.getEntity().getType() == EntityType.SNOWBALL) {
-			List<Entity> e = event.getEntity().getNearbyEntities(1.5, 2, 1.5);
+			List<Entity> e = event.getEntity().getNearbyEntities(1, 1.5, 1);
 			if (!e.isEmpty()) {
 				if (e.get(0) instanceof Player) {
 					Player player = (Player) e.get(0);
@@ -171,7 +171,7 @@ public class GameListener implements Listener {
 										Player shooter = (Player) event.getEntity().getShooter();
 										HashMap<String, GameTeam> w = gm.getGamePlayers(i);
 										if (w.get(shooter.getName()) != w.get(player.getName())) {
-											if (times_players_hit.containsKey(player.getName())) {
+											if (times_players_hit.containsKey(player.getName()) && !players_hit.containsKey(player.getName())) {
 												int u = times_players_hit.get(player.getName());
 												times_players_hit.remove(player.getName());
 												times_players_hit.put(player.getName(), u+1);
