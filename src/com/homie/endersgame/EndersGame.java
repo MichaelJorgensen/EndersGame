@@ -112,7 +112,7 @@ public class EndersGame extends JavaPlugin {
 		}
 	}
 	
-	public void eject(int gameid) {
+	public void ejectGame(int gameid) {
 		send("Attempting to eject all players from arena " + gameid);
 		try {
 			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
@@ -121,6 +121,21 @@ public class EndersGame extends JavaPlugin {
 			}
 			list.clear();
 			gm.updateGamePlayers(gameid, list);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void ejectPlayer(int gameid, String p) {
+		send("Attempting to eject player " + p + " from arena " + gameid);
+		try {
+			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
+			for (Map.Entry<String, GameTeam> en : list.entrySet()) {
+				if (en.getKey() == p) {
+					el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
+					return;
+				}
+			}
 		} catch (SQLException e) {
 			e.printStackTrace();
 		}

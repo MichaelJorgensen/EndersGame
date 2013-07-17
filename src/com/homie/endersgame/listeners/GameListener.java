@@ -46,6 +46,7 @@ public class GameListener implements Listener {
 	public static HashMap<String, Location> creating_game_locations = new HashMap<String, Location>();
 	public static HashMap<String, Location> creating_lobby_locations = new HashMap<String, Location>();
 	public static HashMap<String, Integer> players_hit = new HashMap<String, Integer>();
+	public static HashMap<String, Integer> times_players_hit = new HashMap<String, Integer>();
 	
 	public GameListener(EndersGame plugin) {
 		this.plugin = plugin;
@@ -194,6 +195,11 @@ public class GameListener implements Listener {
 						try {
 							for (Integer i : gm.getAllGamesFromDatabase()) {
 								if (gm.getGamePlayerList(i).contains(player.getName())) {
+									if (times_players_hit.containsKey(player.getName())) {
+										int u = times_players_hit.get(player.getName());
+										times_players_hit.remove(player.getName());
+										times_players_hit.put(player.getName(), u+1);
+									}
 									players_hit.put(player.getName(), 0);
 									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move or shoot for 3 seconds");
 									return;
