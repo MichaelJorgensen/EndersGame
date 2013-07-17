@@ -89,6 +89,7 @@ public class EndersGameListener implements Listener {
 			for (Integer i : gm.getAllGamesFromDatabase()) {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
+					player.resetPlayerTime();
 					GameListener.players_hit.remove(player.getName());
 					GameListener.times_players_hit.remove(player.getName());
 					player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
