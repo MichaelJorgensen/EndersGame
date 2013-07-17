@@ -23,7 +23,7 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -147,11 +147,14 @@ public class GameListener implements Listener {
 	}
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onInventoryOpen(InventoryOpenEvent event) {
+	public void onInventory(InventoryCreativeEvent event) {
 		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (r.getIngamePlayers().contains(event.getPlayer().getName())) {
-				event.setCancelled(true);
-				break;
+			if (event.getWhoClicked() instanceof Player) {
+				Player player = (Player) event.getWhoClicked();
+				if (r.getIngamePlayers().contains(player.getName())) {
+					event.setCancelled(true);
+					break;
+				}
 			}
 		}
 	}

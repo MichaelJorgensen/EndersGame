@@ -66,7 +66,7 @@ public class EndersGameListener implements Listener {
 				}
 				
 				EndersGame.playing_players_gamemode.put(player.getName(), player.getGameMode());
-				player.setGameMode(GameMode.CREATIVE);
+				player.setGameMode(GameMode.SURVIVAL);
 				gm.updateGamePlayers(game.getGameId(), playerlist);
 				player.sendMessage(ChatColor.GREEN + "You have joined Arena " + game.getGameId() + ". You are on team " + playerlist.get(player.getName()).toNiceString() + ", and you are in the lobby");
 				return;
