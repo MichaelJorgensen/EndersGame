@@ -158,6 +158,30 @@ public class GameManageRun implements Runnable {
 					plugin.ejectGame(gameid);
 					return;
 				}
+				if (team1leader.size() == 0) {
+					HashMap<String, GameTeam> list = game.getPlayerList();
+					ArrayList<String> t1players = gm.getPlayersOnTeam(gameid, GameTeam.Team1);
+					int t11 = (int) (Math.random() * t1players.size());
+					String t1 = t1players.get(t11);
+					list.remove(t1);
+					list.put(t1, GameTeam.Team1Leader);
+					game.setPlayerList(list);
+					gm.updateGamePlayers(gameid, list);
+					gm.sendTeamMessage(gameid, GameTeam.Team1, ChatColor.DARK_GREEN + "Your team leader has been lost, " + ChatColor.GOLD + t1 + ChatColor.DARK_GREEN + " is your new leader");
+					team1leader.add(t1);
+				}
+				if (team2leader.size() == 0) {
+					HashMap<String, GameTeam> list = game.getPlayerList();
+					ArrayList<String> t2players = gm.getPlayersOnTeam(gameid, GameTeam.Team2);
+					int t21 = (int) (Math.random() * t2players.size());
+					String t2 = t2players.get(t21);
+					list.remove(t2);
+					list.put(t2, GameTeam.Team2Leader);
+					game.setPlayerList(list);
+					gm.updateGamePlayers(gameid, list);
+					gm.sendTeamMessage(gameid, GameTeam.Team2, ChatColor.DARK_GREEN + "Your team leader has been lost, " + ChatColor.GOLD + t2 + ChatColor.DARK_GREEN + " is your new leader");
+					team2leader.add(t2);
+				}
 				team1.add(team1leader.get(0));
 				team2.add(team2leader.get(0));
 				ArrayList<String> remove_from_t1_spawn = new ArrayList<String>();
@@ -216,6 +240,36 @@ public class GameManageRun implements Runnable {
 					if (!player.getInventory().contains(Material.SNOW_BALL)) {
 						player.sendMessage(ChatColor.RED + "Resetting inventory");
 						player.getInventory().setContents(definv);
+					}
+					if (player.getInventory().getArmorContents().length != 4) {
+						ItemStack[] def = player.getInventory().getContents();
+						def[0] = new ItemStack(Material.SNOW_BALL);
+						definv = def;
+						ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
+						ItemStack leg = new ItemStack(Material.LEATHER_LEGGINGS);
+						ItemStack plate = new ItemStack(Material.LEATHER_CHESTPLATE);
+						LeatherArmorMeta bl = (LeatherArmorMeta) boots.getItemMeta();
+						LeatherArmorMeta ll = (LeatherArmorMeta) leg.getItemMeta();
+						LeatherArmorMeta pl = (LeatherArmorMeta) plate.getItemMeta();
+						if (team1.contains(player.getName())) {
+							bl.setColor(Color.BLUE);
+							ll.setColor(Color.BLUE);
+							pl.setColor(Color.BLUE);
+						}
+						else if (team2.contains(player.getName())) {
+							bl.setColor(Color.RED);
+							ll.setColor(Color.RED);
+							pl.setColor(Color.RED);
+						}
+						boots.setItemMeta(bl);
+						leg.setItemMeta(ll);
+						plate.setItemMeta(pl);
+						player.getInventory().setBoots(boots);
+						player.getInventory().setLeggings(leg);
+						player.getInventory().setChestplate(plate);
+						player.getInventory().setHelmet(new ItemStack(Material.WOOL, 1, (byte) 11));
+						player.getInventory().setContents(def);
+						player.sendMessage(ChatColor.RED + "Resetting armor");
 					}
 				}
 			}
