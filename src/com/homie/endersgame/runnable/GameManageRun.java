@@ -112,21 +112,34 @@ public class GameManageRun implements Runnable {
 					return;
 				}
 				ingame_players = game.getArrayListofPlayers();
+				ArrayList<String> toRemove = new ArrayList<String>();
+				HashMap<String, Integer> toUpdate = new HashMap<String, Integer>();
 				for (Map.Entry<String, Integer> en : GameListener.players_hit.entrySet()) {
 					String i = en.getKey();
 					if (ingame_players.contains(i)) {
 						Integer b = en.getValue();
-						GameListener.players_hit.remove(i);
+						toRemove.add(i);
 						if (b == 3) continue;
-						GameListener.players_hit.put(i, b+1);
+						toUpdate.put(i, b+1);
 					}
 				}
+				for (String i : toRemove) {
+					GameListener.players_hit.remove(i);
+				}
+				for (Map.Entry<String, Integer> en : toUpdate.entrySet()) {
+					GameListener.players_hit.remove(en.getKey());
+					GameListener.players_hit.put(en.getKey(), en.getValue());
+				}
+				ArrayList<String> toRemoveHit = new ArrayList<String>();
 				for (Map.Entry<String, Integer> en : GameListener.times_players_hit.entrySet()) {
 					if (en.getValue() >= hitsToBeEjected) {
 						gm.sendGameMessage(gameid, ChatColor.RED + "Player " + ChatColor.GOLD + en.getKey() + ChatColor.RED + " has been hit " + hitsToBeEjected + " times and has been wiped out from the game");
-						plugin.ejectPlayer(gameid, en.getKey());
-						GameListener.times_players_hit.remove(en.getKey());
+						toRemoveHit.add(en.getKey());
 					}
+				}
+				for (String i : toRemoveHit) {
+					GameListener.times_players_hit.remove(i);
+					plugin.ejectPlayer(gameid, i);
 				}
 				ArrayList<String> team1spawn = gm.getPlayersInTeamSpawn(gamespawns.get(0), 4);
 				ArrayList<String> team2spawn = gm.getPlayersInTeamSpawn(gamespawns.get(1), 4);
