@@ -149,6 +149,20 @@ public class GameManager {
 		return plugin.convertPlayerListToHash(players);
 	}
 	
+	public ArrayList<String> getAllPlayingPlayers() throws SQLException {
+		ArrayList<String> list = new ArrayList<String>();
+		ResultSet rs = sql.query("SELECT players FROM games");
+		if (rs == null) return list;
+		if (sql.getDatabaseOptions() instanceof MySQLOptions) rs.first();
+		while (rs.next()) {
+			String i = rs.getString(1);
+			for (Map.Entry<String, GameTeam> en : plugin.convertPlayerListToHash(i).entrySet()) {
+				list.add(en.getKey());
+			}
+		}
+		return list;
+	}
+	
 	public ArrayList<String> getGamePlayerList(int gameid) throws SQLException {
 		ResultSet rs = sql.query("SELECT players FROM games WHERE gameid=" + gameid);
 		ArrayList<String> list = new ArrayList<String>();
@@ -377,7 +391,7 @@ public class GameManager {
 	/**
 	 * @author Quackster
 	 */
-	public ArrayList<Block> blocksFromTwoPoints(Location loc1, Location loc2)
+	public ArrayList<Block> getGateBlocks(Location loc1, Location loc2)
     {
         ArrayList<Block> blocks = new ArrayList<Block>();
  
@@ -397,7 +411,7 @@ public class GameManager {
                 for(int y = bottomBlockY; y <= topBlockY; y++)
                 {
                     Block block = loc1.getWorld().getBlockAt(x, y, z);
-                    if (block.getType() == Material.REDSTONE_BLOCK) {
+                    if (block.getType() == Material.GLOWSTONE) {
                         blocks.add(block);
                     }
                 }
