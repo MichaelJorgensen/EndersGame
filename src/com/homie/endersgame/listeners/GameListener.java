@@ -187,7 +187,7 @@ public class GameListener implements Listener {
 	@EventHandler(priority = EventPriority.NORMAL)
 	public void onSnowallHit(ProjectileHitEvent event) {
 		if (event.getEntity().getType() == EntityType.SNOWBALL) {
-			List<Entity> e = event.getEntity().getNearbyEntities(1, 1, 1);
+			List<Entity> e = event.getEntity().getNearbyEntities(1.5, 2, 1.5);
 			if (!e.isEmpty()) {
 				if (e.get(0) instanceof Player) {
 					Player player = (Player) e.get(0);
@@ -200,8 +200,10 @@ public class GameListener implements Listener {
 										times_players_hit.remove(player.getName());
 										times_players_hit.put(player.getName(), u+1);
 									}
+									if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
 									players_hit.put(player.getName(), 0);
-									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move or shoot for 3 seconds");
+									EndersGame.debug("times_players_hit: " + times_players_hit.toString());
+									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
 									return;
 								}
 							}

@@ -52,6 +52,7 @@ public class GameRun implements Runnable {
 					if (g == 0) {
 						GameManageRun r = new GameManageRun(plugin, game.getGameId());
 						r.setId(plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, r, 10L, 20L));
+						gm.addRunner(r);
 					}
 				}
 			}

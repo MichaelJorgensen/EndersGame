@@ -64,16 +64,25 @@ public class GameManageRun implements Runnable {
 		this.id = id;
 	}
 	
+	public void resetDoor(Game game) {
+		for (int i = 0; i < gate_blocks.size(); i++) {
+			Block b = gate_blocks.get(i);
+			game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
+		}
+	}
+	
+	public int getGameId() {
+		return gameid;
+	}
+	
 	@Override
 	public void run() {
 		try {
 			Game game = gm.getGame(gameid);
 			if (game.getPlayerList().size() == 0) {
 				gm.updateGameStage(gameid, GameStage.Lobby);
-				for (int i = 0; i < gate_blocks.size(); i++) {
-					Block b = gate_blocks.get(i);
-					game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
-				}
+				resetDoor(game);
+				gm.removeRunner(this);
 				Bukkit.getScheduler().cancelTask(id);
 				return;
 			}
@@ -89,7 +98,6 @@ public class GameManageRun implements Runnable {
 						Block b = gate_blocks.get(i);
 						game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.AIR);
 					}
-					EndersGame.debug("gate_blocks now: " + gate_blocks.size());
 					doors = true;
 					gm.sendGameMessage(gameid, ChatColor.GREEN + "The gates are open!");
 				}
@@ -105,10 +113,7 @@ public class GameManageRun implements Runnable {
 					if (ingame_players.contains(i)) {
 						Integer b = en.getValue();
 						GameListener.players_hit.remove(i);
-						if (b == 3) {
-							if (GameListener.times_players_hit.containsKey(i)) GameListener.times_players_hit.remove(i);
-							continue;
-						}
+						if (b == 3) continue;
 						GameListener.players_hit.put(i, b+1);
 					}
 				}
@@ -265,7 +270,7 @@ public class GameManageRun implements Runnable {
 				}
 				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
 				gate_blocks = gm.blocksFromTwoPoints(game.getLocationOne(), game.getLocationTwo());
-				EndersGame.debug("gate_blocks length: " + gate_blocks.size());
+				EndersGame.debug("Detected gate blocks: " + gate_blocks.size());
 				return;
 			}
 			if (game.getGameStage() == GameStage.Lobby) {
