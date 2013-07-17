@@ -89,8 +89,9 @@ public class EndersGameListener implements Listener {
 			for (Integer i : gm.getAllGamesFromDatabase()) {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
+					player.resetPlayerTime();
 					GameListener.players_hit.remove(player.getName());
-					if (GameListener.times_players_hit.containsKey(player.getName())) GameListener.times_players_hit.remove(player.getName());
+					GameListener.times_players_hit.remove(player.getName());
 					player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
 					player.teleport(player.getLocation().getWorld().getSpawnLocation());
 					player.setFlySpeed(0.1f);
@@ -102,6 +103,7 @@ public class EndersGameListener implements Listener {
 					player.updateInventory();
 					EndersGame.playing_players_gamemode.remove(player.getName());
 					EndersGame.playing_players_inventory.remove(player.getName());
+					EndersGame.player_players_armor.remove(player.getName());
 					players.remove(player.getName());
 					gm.updateGamePlayers(i, players);
 					EventHandle.callPlayerLeaveEndersGameEvent(i, player);
