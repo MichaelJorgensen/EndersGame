@@ -259,7 +259,7 @@ public class GameListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.NORMAL)
 	public void onPlayerLeave(PlayerQuitEvent event) {
-		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 4L);
+		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 1L);
 		if (event.getPlayer().hasPermission("EndersGame.create")) {
 			EventHandle.callCancelCreatingCommandEvent(event.getPlayer());
 		}
