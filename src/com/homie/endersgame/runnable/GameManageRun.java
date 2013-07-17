@@ -316,6 +316,7 @@ public class GameManageRun implements Runnable {
 					player.getInventory().setChestplate(plate);
 					player.getInventory().setHelmet(new ItemStack(Material.WOOL, 1, (byte) 11));
 					player.getInventory().setContents(def);
+					player.setPlayerTime(16000, false);
 				}
 				for (String i : team2) {
 					Player player = plugin.getServer().getPlayer(i);
@@ -341,6 +342,7 @@ public class GameManageRun implements Runnable {
 					player.getInventory().setChestplate(plate);
 					player.getInventory().setHelmet(new ItemStack(Material.WOOL, 1, (byte) 14));
 					player.getInventory().setContents(def);
+					player.setPlayerTime(16000, false);
 				}
 				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
 				gate_blocks = gm.getGateBlocks(game.getLocationOne(), game.getLocationTwo());
