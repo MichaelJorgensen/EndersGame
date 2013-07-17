@@ -46,6 +46,7 @@ public class GameListener implements Listener {
 	public static HashMap<String, Location> creating_game_locations = new HashMap<String, Location>();
 	public static HashMap<String, Location> creating_lobby_locations = new HashMap<String, Location>();
 	public static HashMap<String, Integer> players_hit = new HashMap<String, Integer>();
+	public static HashMap<String, Integer> times_players_hit = new HashMap<String, Integer>();
 	
 	public GameListener(EndersGame plugin) {
 		this.plugin = plugin;
@@ -178,7 +179,7 @@ public class GameListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerMove(PlayerMoveEvent event) {
-		if (players_hit.containsKey(event.getPlayer().getName()) && new Random().nextInt(2) == 0) {
+		if (players_hit.containsKey(event.getPlayer().getName())) {
 			event.setCancelled(true);
 		}
 	}
@@ -186,7 +187,7 @@ public class GameListener implements Listener {
 	@EventHandler(priority = EventPriority.NORMAL)
 	public void onSnowallHit(ProjectileHitEvent event) {
 		if (event.getEntity().getType() == EntityType.SNOWBALL) {
-			List<Entity> e = event.getEntity().getNearbyEntities(1, 1, 1);
+			List<Entity> e = event.getEntity().getNearbyEntities(1.5, 2, 1.5);
 			if (!e.isEmpty()) {
 				if (e.get(0) instanceof Player) {
 					Player player = (Player) e.get(0);
@@ -194,8 +195,15 @@ public class GameListener implements Listener {
 						try {
 							for (Integer i : gm.getAllGamesFromDatabase()) {
 								if (gm.getGamePlayerList(i).contains(player.getName())) {
+									if (times_players_hit.containsKey(player.getName())) {
+										int u = times_players_hit.get(player.getName());
+										times_players_hit.remove(player.getName());
+										times_players_hit.put(player.getName(), u+1);
+									}
+									if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
 									players_hit.put(player.getName(), 0);
-									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move or shoot for 3 seconds");
+									EndersGame.debug("times_players_hit: " + times_players_hit.toString());
+									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
 									return;
 								}
 							}
@@ -307,7 +315,7 @@ public class GameListener implements Listener {
 		String name = player.getName();
 		if (players_hit.containsKey(name)) {
 			if (event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK) {
-				if (player.getItemInHand().getType() == Material.SNOW_BALL) {
+				if (player.getItemInHand().getType() == Material.SNOW_BALL && new Random().nextInt(2) == 0) {
 					event.setCancelled(true);
 					return;
 				}

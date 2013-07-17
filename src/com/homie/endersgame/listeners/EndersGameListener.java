@@ -90,6 +90,7 @@ public class EndersGameListener implements Listener {
 				HashMap<String, GameTeam> players = gm.getGamePlayers(i);
 				if (players.containsKey(player.getName())) {
 					GameListener.players_hit.remove(player.getName());
+					if (GameListener.times_players_hit.containsKey(player.getName())) GameListener.times_players_hit.remove(player.getName());
 					player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
 					player.teleport(player.getLocation().getWorld().getSpawnLocation());
 					player.setFlySpeed(0.1f);
