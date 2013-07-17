@@ -75,6 +75,10 @@ public class GameManageRun implements Runnable {
 		return gameid;
 	}
 	
+	public ArrayList<String> getIngamePlayers() {
+		return ingame_players;
+	}
+	
 	@Override
 	public void run() {
 		try {
@@ -269,7 +273,7 @@ public class GameManageRun implements Runnable {
 					player.getInventory().setContents(def);
 				}
 				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
-				gate_blocks = gm.blocksFromTwoPoints(game.getLocationOne(), game.getLocationTwo());
+				gate_blocks = gm.getGateBlocks(game.getLocationOne(), game.getLocationTwo());
 				EndersGame.debug("Detected gate blocks: " + gate_blocks.size());
 				return;
 			}
