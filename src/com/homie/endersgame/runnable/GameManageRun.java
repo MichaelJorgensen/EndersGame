@@ -8,6 +8,7 @@ import java.util.Map;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Color;
+import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -204,6 +205,7 @@ public class GameManageRun implements Runnable {
 				for (String i : ingame_players) {
 					Player player = plugin.getServer().getPlayer(i);
 					if (player == null) continue;
+					if (player.getGameMode() != GameMode.CREATIVE) player.setGameMode(GameMode.CREATIVE);
 					player.setScoreboard(board);
 					Material below = player.getLocation().getBlock().getRelative(BlockFace.DOWN).getType();
 					if (below != Material.AIR && below != Material.OBSIDIAN && below != Material.REDSTONE_LAMP_ON && below != Material.REDSTONE_LAMP_OFF && !player.isFlying()) {
