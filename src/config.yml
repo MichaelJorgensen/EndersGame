@@ -11,3 +11,4 @@ game:
     max-players: 12
     min-percent-to-start: 40
     percent-in-spawn-to-win: 20
+    hits-to-be-ejected-from-game: 3

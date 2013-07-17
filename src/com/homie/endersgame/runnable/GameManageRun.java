@@ -40,6 +40,7 @@ public class GameManageRun implements Runnable {
 	private ItemStack[] definv;
 	private int max;
 	private int per;
+	private int hitsToBeEjected;
 	private double perToWin;
 	
 	private int wait = 9;
@@ -55,11 +56,23 @@ public class GameManageRun implements Runnable {
 		this.gameid = gameid;
 		this.max = plugin.getConfiguration().getMaxPlayers();
 		this.per = plugin.getConfiguration().getMinPercentToStart();
+		this.hitsToBeEjected = plugin.getConfiguration().getHitsToBeEjected();
 		this.perToWin = plugin.getConfiguration().getPercentInSpawnToWin();
 	}
 	
 	public void setId(int id) {
 		this.id = id;
+	}
+	
+	public void resetDoor(Game game) {
+		for (int i = 0; i < gate_blocks.size(); i++) {
+			Block b = gate_blocks.get(i);
+			game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
+		}
+	}
+	
+	public int getGameId() {
+		return gameid;
 	}
 	
 	@Override
@@ -68,10 +81,8 @@ public class GameManageRun implements Runnable {
 			Game game = gm.getGame(gameid);
 			if (game.getPlayerList().size() == 0) {
 				gm.updateGameStage(gameid, GameStage.Lobby);
-				for (int i = 0; i < gate_blocks.size(); i++) {
-					Block b = gate_blocks.get(i);
-					game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.REDSTONE_BLOCK);
-				}
+				resetDoor(game);
+				gm.removeRunner(this);
 				Bukkit.getScheduler().cancelTask(id);
 				return;
 			}
@@ -87,14 +98,13 @@ public class GameManageRun implements Runnable {
 						Block b = gate_blocks.get(i);
 						game.getLocationOne().getWorld().getBlockAt(b.getLocation()).setType(Material.AIR);
 					}
-					EndersGame.debug("gate_blocks now: " + gate_blocks.size());
 					doors = true;
 					gm.sendGameMessage(gameid, ChatColor.GREEN + "The gates are open!");
 				}
 				timelimit++;
 				if (timelimit == 300) {
 					gm.sendGameMessage(gameid, "Time limit reached");
-					plugin.eject(gameid);
+					plugin.ejectGame(gameid);
 					return;
 				}
 				ingame_players = game.getArrayListofPlayers();
@@ -107,6 +117,13 @@ public class GameManageRun implements Runnable {
 						GameListener.players_hit.put(i, b+1);
 					}
 				}
+				for (Map.Entry<String, Integer> en : GameListener.times_players_hit.entrySet()) {
+					if (en.getValue() >= hitsToBeEjected) {
+						gm.sendGameMessage(gameid, ChatColor.RED + "Player " + ChatColor.GOLD + en.getKey() + ChatColor.RED + " has been hit " + hitsToBeEjected + " times and has been wiped out from the game");
+						plugin.ejectPlayer(gameid, en.getKey());
+						GameListener.times_players_hit.remove(en.getKey());
+					}
+				}
 				ArrayList<String> team1spawn = gm.getPlayersInTeamSpawn(gamespawns.get(0), 4);
 				ArrayList<String> team2spawn = gm.getPlayersInTeamSpawn(gamespawns.get(1), 4);
 				ArrayList<String> team1 = gm.getPlayersOnTeam(gameid, GameTeam.Team1);
@@ -114,13 +131,13 @@ public class GameManageRun implements Runnable {
 				ArrayList<String> team2 = gm.getPlayersOnTeam(gameid, GameTeam.Team2);
 				ArrayList<String> team2leader = gm.getPlayersOnTeam(gameid, GameTeam.Team2Leader);
 				if (team1.size() + team1leader.size() == 0) {
-					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, all Team 1 players have left");
-					plugin.eject(gameid);
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, all Team 1 players have left or have been wiped out");
+					plugin.ejectGame(gameid);
 					return;
 				}
 				if (team2.size() + team2leader.size() == 0) {
-					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, all Team 2 players have left");
-					plugin.eject(gameid);
+					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, all Team 2 players have left or have been wiped out");
+					plugin.ejectGame(gameid);
 					return;
 				}
 				team1.add(team1leader.get(0));
@@ -151,12 +168,12 @@ public class GameManageRun implements Runnable {
 				if (t2win < 1) t2win = 1;
 				if (team1spawn.size() >= t1win) {
 					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 2 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
-					plugin.eject(gameid);
+					plugin.ejectGame(gameid);
 					return;
 				}
 				if (team2spawn.size() >= t2win) {
 					gm.sendGameMessage(gameid, ChatColor.GREEN + "Team 1 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
-					plugin.eject(gameid);
+					plugin.ejectGame(gameid);
 					return;
 				}
 				Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
@@ -253,7 +270,7 @@ public class GameManageRun implements Runnable {
 				}
 				gm.sendGameMessage(gameid, ChatColor.DARK_GREEN + "Prepare to fight!");
 				gate_blocks = gm.blocksFromTwoPoints(game.getLocationOne(), game.getLocationTwo());
-				EndersGame.debug("gate_blocks length: " + gate_blocks.size());
+				EndersGame.debug("Detected gate blocks: " + gate_blocks.size());
 				return;
 			}
 			if (game.getGameStage() == GameStage.Lobby) {

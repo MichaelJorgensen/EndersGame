@@ -20,17 +20,31 @@ import org.bukkit.entity.Player;
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.Game.GameStage;
 import com.homie.endersgame.api.Game.GameTeam;
+import com.homie.endersgame.runnable.GameManageRun;
 import com.homie.endersgame.sql.SQL;
 import com.homie.endersgame.sql.options.MySQLOptions;
 
 public class GameManager {
 
+	private ArrayList<GameManageRun> gamerunners = new ArrayList<GameManageRun>();
 	private EndersGame plugin;
 	private SQL sql;
 	
 	public GameManager(EndersGame plugin) {
 		this.plugin = plugin;
 		this.sql = plugin.getSQL();
+	}
+	
+	public void addRunner(GameManageRun r) {
+		gamerunners.add(r);
+	}
+	
+	public void removeRunner(GameManageRun r) {
+		gamerunners.remove(r);
+	}
+	
+	public ArrayList<GameManageRun> getRunningGameInstances() {
+		return gamerunners;
 	}
 	
 	public void registerSign(Block block, int gameid) throws SQLException {

@@ -52,4 +52,8 @@ public class Config {
 	public int getPercentInSpawnToWin() {
 		return config.getInt("game.percent-in-spawn-to-win", 20);
 	}
+	
+	public int getHitsToBeEjected() {
+		return config.getInt("game.hits-to-be-ejected-from-game", 3);
+	}
 }

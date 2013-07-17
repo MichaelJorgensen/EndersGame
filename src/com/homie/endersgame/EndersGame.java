@@ -24,6 +24,7 @@ import com.homie.endersgame.api.events.game.PlayerAttemptLeaveEndersGameEvent;
 import com.homie.endersgame.listeners.DebugListener;
 import com.homie.endersgame.listeners.EndersGameListener;
 import com.homie.endersgame.listeners.GameListener;
+import com.homie.endersgame.runnable.GameManageRun;
 import com.homie.endersgame.runnable.GameRun;
 import com.homie.endersgame.runnable.SignRun;
 import com.homie.endersgame.sql.SQL;
@@ -87,6 +88,13 @@ public class EndersGame extends JavaPlugin {
 	}
 	
 	public void onDisable() {
+		try {
+			for (GameManageRun r : gm.getRunningGameInstances()) {
+				r.resetDoor(gm.getGame(r.getGameId()));
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
 		ejectAll();
 		send("Attempting to close SQL connection");
 		try {
@@ -112,7 +120,7 @@ public class EndersGame extends JavaPlugin {
 		}
 	}
 	
-	public void eject(int gameid) {
+	public void ejectGame(int gameid) {
 		send("Attempting to eject all players from arena " + gameid);
 		try {
 			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
@@ -120,6 +128,23 @@ public class EndersGame extends JavaPlugin {
 				el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
 			}
 			list.clear();
+			gm.updateGamePlayers(gameid, list);
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void ejectPlayer(int gameid, String p) {
+		send("Attempting to eject player " + p + " from arena " + gameid);
+		try {
+			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
+			for (Map.Entry<String, GameTeam> en : list.entrySet()) {
+				if (en.getKey().equalsIgnoreCase(p)) {
+					el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
+					return;
+				}
+			}
+			list.remove(p);
 			gm.updateGamePlayers(gameid, list);
 		} catch (SQLException e) {
 			e.printStackTrace();
