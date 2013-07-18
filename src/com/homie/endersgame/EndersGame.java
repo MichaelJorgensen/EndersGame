@@ -1,6 +1,12 @@
 package com.homie.endersgame;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +44,7 @@ public class EndersGame extends JavaPlugin {
 	private DatabaseOptions dop;
 	private GameManager gm;
 	private Config config;
+	private String v;
 	private static boolean debug;
 	
 	private EndersGameListener el;
@@ -85,6 +92,32 @@ public class EndersGame extends JavaPlugin {
 				SQL.resetCount();
 			}
 		}, 1200L, 1200L);
+		
+		send("Checking for new version(s)");
+		try {
+			BufferedReader br = new BufferedReader(new InputStreamReader(new URL("https://docs.google.com/uc?export=download&id=0BynZyjWQxP7XQlRJY19RQnM1RnM").openStream()));
+			v = br.readLine();
+			br.close();
+			if (!getDescription().getVersion().equalsIgnoreCase(v)) {
+				send("!!!!!~~~~~NEW VERSION FOR ENDERS GAME~~~~~!!!!!");
+				send("Current version: " + getDescription().getVersion() + ", New version: " + v);
+				send("Attempting to download..");
+				
+				BufferedInputStream in = new BufferedInputStream(new URL("https://docs.google.com/uc?export=download&id=0BynZyjWQxP7XdjdDcGE5U1BHc0k").openStream());
+				FileOutputStream fos = new FileOutputStream(new File("plugins/EndersGame.jar"));
+				byte d[] = new byte[1024];
+				int count;
+				while ((count = in.read(d, 0, 1024)) != -1) {
+					fos.write(d, 0, count);
+				}
+				in.close();
+				fos.close();
+				send("Successfully updated EndersGame. Reload or restart to see changes");
+			}
+		} catch (IOException e) {
+			sendErr("Failed to download update or check for update");
+			e.printStackTrace();
+		}
 	}
 	
 	public void onDisable() {
@@ -501,6 +534,12 @@ public class EndersGame extends JavaPlugin {
 				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.override)");
 				return true;
 			}
+		}
+		
+		else if (args[0].equalsIgnoreCase("version")) {
+			sender.sendMessage(ChatColor.GOLD + "EndersGame Version: " + ChatColor.BLUE + getDescription().getVersion());
+			sender.sendMessage(ChatColor.GOLD + "Server Version: " + ChatColor.BLUE + getServer().getVersion());
+			return true;
 		}
 		
 		else if (args[0].equalsIgnoreCase("cancel")) {
