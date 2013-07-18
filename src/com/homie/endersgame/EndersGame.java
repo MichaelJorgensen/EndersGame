@@ -503,6 +503,12 @@ public class EndersGame extends JavaPlugin {
 			}
 		}
 		
+		else if (args[0].equalsIgnoreCase("version")) {
+			sender.sendMessage(ChatColor.GOLD + "EndersGame Version: " + ChatColor.BLUE + getDescription().getVersion());
+			sender.sendMessage(ChatColor.GOLD + "Server Version: " + ChatColor.BLUE + getServer().getVersion());
+			return true;
+		}
+		
 		else if (args[0].equalsIgnoreCase("cancel")) {
 			if (!(sender instanceof Player)) {
 				sender.sendMessage(ChatColor.RED + "You must be a player to cancel");
