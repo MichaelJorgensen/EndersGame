@@ -110,7 +110,7 @@ public class EndersGame extends JavaPlugin {
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
 		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
 		send("Checking for new version(s)");
-		//update();
+		update();
 	}
 	
 	public void onDisable() {
