@@ -70,7 +70,12 @@ public class Config {
 		plugin.saveConfig();
 	}
 	
-	public int getHitsToBeEjected() {
-		return config.getInt("game.hits-to-be-ejected-from-game", 3);
+	public int getMaxHits() {
+		return config.getInt("game.max-hits", 2);
+	}
+	
+	public void setMaxHits(int maxhits) {
+		config.set("game.max-hits", maxhits);
+		
 	}
 }

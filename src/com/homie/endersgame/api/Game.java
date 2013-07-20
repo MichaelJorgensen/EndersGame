@@ -370,14 +370,25 @@ public class Game implements Runnable {
 			broadcast(ChatColor.RED + "Time limit reached in Arena " + ChatColor.GOLD + gameid);
 			ejectAllPlayers(false);
 			running = false;
+			timelimit = 0;
 		}
 		
 		if (update == 7) {
+			update = 0;
 			updateGame();
 		}
 		
 		if (ingame_players.size() > 0 && !running) {
 			running = true;
+		}
+		
+		if (!running) {
+			if (lobbWait != 0) lobbWait = 0;
+			if (timelimit != 0) timelimit = 0;
+			if (openDoors != 0) openDoors = 0;
+			if (wait != 9) wait = 9;
+			if (begin) begin = false;
+			if (doors) doors = false;
 		}
 		
 		if (running) {
@@ -388,7 +399,7 @@ public class Game implements Runnable {
 	private void updateGame() {
 		this.maxPlayers = plugin.getConfiguration().getMaxPlayers();
 		this.perToStart = plugin.getConfiguration().getMinPercentToStart();
-		this.maxHits = plugin.getConfiguration().getHitsToBeEjected();
+		this.maxHits = plugin.getConfiguration().getMaxHits();
 		this.perToWin = plugin.getConfiguration().getPercentInSpawnToWin();
 		this.gate_blocks = getGateBlocks(l1, l2);
 		if (sign == null && !missingSign) missingSign = true; 
@@ -466,13 +477,22 @@ public class Game implements Runnable {
 			ArrayList<String> toRemoveHit = new ArrayList<String>();
 			for (Map.Entry<String, Integer> en : GameListener.times_players_hit.entrySet()) {
 				if (en.getValue() >= maxHits) {
-					sendGameMessage(ChatColor.RED + "Player " + ChatColor.GOLD + en.getKey() + ChatColor.RED + " has been hit " + maxHits + " times and has been wiped out from the game");
+					Player player = plugin.getServer().getPlayer(en.getKey());
+					if (player != null) {
+						GameTeam pteam = list.get(player.getName());
+						if (pteam == GameTeam.Team1 || pteam == GameTeam.Team1Leader) {
+							player.teleport(gamespawns.get(0));
+						}
+						if (pteam == GameTeam.Team2 || pteam == GameTeam.Team2Leader) {
+							player.teleport(gamespawns.get(1));
+						}
+						player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit " + maxHits + " time(s) and you have respawned back at base");
+					}
 					toRemoveHit.add(en.getKey());
 				}
 			}
 			for (String i : toRemoveHit) {
 				GameListener.times_players_hit.remove(i);
-				ejectPlayer(plugin.getServer().getPlayer(i), false);
 			}
 			ArrayList<String> team1spawn = getPlayersInTeamSpawn(gamespawns.get(0), 4);
 			ArrayList<String> team2spawn = getPlayersInTeamSpawn(gamespawns.get(1), 4);
@@ -482,11 +502,13 @@ public class Game implements Runnable {
 			ArrayList<String> team2leader = getPlayersOnTeam(GameTeam.Team2Leader);
 			if (team1.size() + team1leader.size() == 0) {
 				sendGameMessage(ChatColor.GREEN + "Team 2 has won, all Team 1 players have left or have been wiped out");
+				broadcast(ChatColor.GREEN + "Team 2 has won on arena " + gameid);
 				ejectAllPlayers(false);
 				return;
 			}
 			if (team2.size() + team2leader.size() == 0) {
 				sendGameMessage(ChatColor.GREEN + "Team 1 has won, all Team 2 players have left or have been wiped out");
+				broadcast(ChatColor.GREEN + "Team 1 has won on arena " + gameid);
 				ejectAllPlayers(false);
 				return;
 			}
@@ -536,11 +558,13 @@ public class Game implements Runnable {
 			if (t2win < 1) t2win = 1;
 			if (team1spawn.size() >= t1win) {
 				sendGameMessage(ChatColor.GREEN + "Team 2 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
+				broadcast(ChatColor.GREEN + "Team 2 has won on arena " + gameid);
 				ejectAllPlayers(false);
 				return;
 			}
 			if (team2spawn.size() >= t2win) {
 				sendGameMessage(ChatColor.GREEN + "Team 1 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
+				broadcast(ChatColor.GREEN + "Team 1 has won on arena " + gameid);
 				ejectAllPlayers(false);
 				return;
 			}

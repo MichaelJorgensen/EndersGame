@@ -23,6 +23,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -125,6 +126,18 @@ public class GameListener implements Listener {
 		}
 	}
 	
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onPlayerDamage(EntityDamageEvent event) {
+		if (event.getEntity() instanceof Player) {
+			Player player = (Player) event.getEntity();
+			for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+				if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
+					event.setCancelled(true);
+				}
+			}
+		}
+	}
+	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerDrop(PlayerDropItemEvent event) {
 		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
@@ -159,29 +172,28 @@ public class GameListener implements Listener {
 		if (event.getEntity().getType() == EntityType.SNOWBALL) {
 			List<Entity> e = event.getEntity().getNearbyEntities(1, 1.5, 1);
 			if (!e.isEmpty()) {
-				if (e.get(0) instanceof Player) {
-					Player player = (Player) e.get(0);
+				int size = e.size();
+				if (e.get(size-1) instanceof Player) {
+					Player player = (Player) e.get(size-1);
 					if (!players_hit.containsKey(player.getName())) {
 						for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
 							if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
 								if (event.getEntity().getShooter() instanceof Player) {
 									Player shooter = (Player) event.getEntity().getShooter();
 									HashMap<String, GameTeam> w = en.getValue().getPlayerList();
-									if (w.get(shooter.getName()) != w.get(player.getName())) {
-										if (times_players_hit.containsKey(player.getName()) && !players_hit.containsKey(player.getName())) {
-											int u = times_players_hit.get(player.getName());
-											times_players_hit.remove(player.getName());
-											times_players_hit.put(player.getName(), u+1);
-										}
-										if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
-										players_hit.put(player.getName(), 0);
-										EndersGame.debug("times_players_hit: " + times_players_hit.toString());
-										player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
-										return;
-									} else {
+									if (w.get(shooter.getName()) == w.get(player.getName())) {
 										shooter.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "Don't shoot yourself or your team!");
 										return;
 									}
+									if (times_players_hit.containsKey(player.getName()) && !players_hit.containsKey(player.getName())) {
+										int u = times_players_hit.get(player.getName());
+										times_players_hit.remove(player.getName());
+										times_players_hit.put(player.getName(), u+1);
+									}
+									if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
+									players_hit.put(player.getName(), 0);
+									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
+									return;
 								}
 							}
 						}
@@ -244,15 +256,19 @@ public class GameListener implements Listener {
 	}
 	
 	@EventHandler(priority = EventPriority.NORMAL)
-	public void onPlayerLeave(PlayerQuitEvent event) {
+	public void onPlayerLeave(final PlayerQuitEvent event) {
 		if (event.getPlayer().hasPermission("EndersGame.create")) {
 			Game.cancelCreatingCommandEventForPlayer(event.getPlayer(), false);
 		}
-		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+		for (final Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
 			if (en.getValue().getArrayListofPlayers().contains(event.getPlayer().getName())) {
 				event.getPlayer().resetPlayerTime();
-				en.getValue().ejectOfflinePlayer(new ImprovedOfflinePlayer(Bukkit.getOfflinePlayer(event.getPlayer().getName())));
-				return;
+				plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+					@Override
+					public void run() {
+						en.getValue().ejectOfflinePlayer(new ImprovedOfflinePlayer(Bukkit.getOfflinePlayer(event.getPlayer().getName())));
+					}
+				}, 5L);
 			}
 		}
 	}

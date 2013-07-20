@@ -582,8 +582,18 @@ public class EndersGame extends JavaPlugin {
 						sender.sendMessage(ChatColor.GREEN + "Value set, allow up to 7 seconds for arenas to update");
 						return true;
 					}
+					else if (args[1].equalsIgnoreCase("max-hits")) {
+						try {
+							config.setMaxHits(Integer.parseInt(args[2]));
+						} catch (NumberFormatException e) {
+							sender.sendMessage(ChatColor.RED + args[2] + " is not a number");
+							return true;
+						}
+						sender.sendMessage(ChatColor.GREEN + "Value set, allow up to 7 seconds for arenas to update");
+						return true;
+					}
 				}
-				sender.sendMessage(ChatColor.GOLD + "/eg [minpercenttostart|percentinspawntowin|maxplayers]");
+				sender.sendMessage(ChatColor.GOLD + "/eg setvalue [minpercenttostart|percentinspawntowin|maxplayers]");
 				return true;
 			} else {
 				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.override)");
