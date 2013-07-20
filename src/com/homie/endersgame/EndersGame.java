@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,16 +24,11 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import com.homie.endersgame.api.Game;
 import com.homie.endersgame.api.Game.GameTeam;
-import com.homie.endersgame.api.GameManager;
-import com.homie.endersgame.api.events.EventHandle;
-import com.homie.endersgame.api.events.game.PlayerAttemptLeaveEndersGameEvent;
+import com.homie.endersgame.api.Lobby;
 import com.homie.endersgame.listeners.DebugListener;
-import com.homie.endersgame.listeners.EndersGameListener;
 import com.homie.endersgame.listeners.GameListener;
-import com.homie.endersgame.runnable.GameManageRun;
-import com.homie.endersgame.runnable.GameRun;
-import com.homie.endersgame.runnable.SignRun;
 import com.homie.endersgame.sql.SQL;
 import com.homie.endersgame.sql.options.DatabaseOptions;
 import com.homie.endersgame.sql.options.MySQLOptions;
@@ -42,13 +38,12 @@ public class EndersGame extends JavaPlugin {
 
 	private SQL sql;
 	private DatabaseOptions dop;
-	private GameManager gm;
 	private Config config;
 	private String v;
 	private static boolean debug;
 	
-	private EndersGameListener el;
-	private SignRun sr;
+	private static HashMap<Integer, Game> runningGames = new HashMap<Integer, Game>();
+	private static HashMap<Integer, Lobby> lobbyList = new HashMap<Integer, Lobby>();
 	
 	public static HashMap<String, ItemStack[]> playing_players_inventory = new HashMap<String, ItemStack[]>();
 	public static HashMap<String, ItemStack[]> player_players_armor = new HashMap<String, ItemStack[]>();
@@ -67,33 +62,78 @@ public class EndersGame extends JavaPlugin {
 		config = new Config(this);
 		debug = config.getDebug();
 		
-		// Setup MySQL/SQlite
 		if (!setupSQL()) {
 			sendErr("SQL could not be setup, EndersGame will disable");
 			getPluginLoader().disablePlugin(this);
 			return;
 		}
-		// With SQL setup, we can initiate the game manager
-		gm = new GameManager(this);
+		int a = 0;
+		int l = 0;
+		send("Setting up arenas and lobbies");
+		try {
+			ResultSet ls = sql.query("SELECT lobbyid FROM lobbies");
+			while (ls.next()) {
+				int lobbyid = ls.getInt(1);
+				ResultSet lo = sql.query("SELECT * FROM lobbies WHERE lobbyid=" + ls.getInt(1));
+				ResultSet lospawn = sql.query("SELECT * FROM lobbyspawns WHERE lobbyid=" + ls.getInt(1));
+				lobbyList.put(lobbyid, new Lobby(this, lobbyid,
+						new Location(getServer().getWorld(lo.getString("world")), lo.getInt("x1"), lo.getInt("y1"), lo.getInt("z1")),
+						new Location(getServer().getWorld(lo.getString("world")), lo.getInt("x2"), lo.getInt("y2"), lo.getInt("z2")),
+						new Location(getServer().getWorld(lospawn.getString("world")), lospawn.getInt("coordX"), lospawn.getInt("coordY"), lospawn.getInt("coordZ"))));
+				l++;
+			}
+			ResultSet rs = sql.query("SELECT gameid FROM games");
+			while (rs.next()) {
+				ResultSet ga = sql.query("SELECT * FROM games WHERE gameid=" + rs.getInt(1));
+				int gameid = ga.getInt("gameid");
+				ResultSet si = sql.query("SELECT * FROM signs WHERE gameid=" + gameid);
+				ResultSet gaspawn = sql.query("SELECT * FROM gamespawns WHERE gameid=" + gameid);
+				ArrayList<Location> gamespawns = new ArrayList<Location>();
+				gamespawns.add(new Location(getServer().getWorld(gaspawn.getString("world")), gaspawn.getInt("x1"), gaspawn.getInt("y1"), gaspawn.getInt("z1")));
+				gamespawns.add(new Location(getServer().getWorld(gaspawn.getString("world")), gaspawn.getInt("x2"), gaspawn.getInt("y2"), gaspawn.getInt("z2")));
+				Game game = new Game(this, gameid, lobbyList.get(ga.getInt("lobbyid")),
+						getServer().getWorld(si.getString("world")).getBlockAt(si.getInt("coordX"), si.getInt("coordY"), si.getInt("coordZ")).getLocation(),
+						new Location(getServer().getWorld(ga.getString("world")), ga.getInt("x1"), ga.getInt("y1"), ga.getInt("z1")),
+						new Location(getServer().getWorld(ga.getString("world")), ga.getInt("x2"), ga.getInt("y2"), ga.getInt("z2")), gamespawns);
+				runningGames.put(gameid, game);
+				getServer().getScheduler().scheduleSyncRepeatingTask(this, game, 20L, 20L);
+				a++;
+			}
+		} catch (SQLException e) {
+			sendErr("Games could not be setup, plugin is disabling");
+			getServer().getPluginManager().disablePlugin(this);
+			e.printStackTrace();
+			return;
+		}
+		send("Sucessfully setup " + a + " arenas and " + l + " lobbies");
 		
-		el = new EndersGameListener(this);
-		sr = new SignRun(this);
-		// Register events and runnables
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
-		getServer().getPluginManager().registerEvents(el, this);
 		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, sr, 75L, 1200L);
-		getServer().getScheduler().scheduleSyncRepeatingTask(this, new GameRun(this), 10L, 60L);
-		if (debug) getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable()
-		{
+		if (debug) getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
 			@Override
 			public void run() {
-				EndersGame.debug("Queries in the last minute: " + SQL.q);
-				SQL.resetCount();
+				debug("Current games: " + runningGames.keySet().toString());
+				debug("Current lobbies: " + lobbyList.keySet().toString());
 			}
 		}, 1200L, 1200L);
-		
 		send("Checking for new version(s)");
+		//update();
+	}
+	
+	public void onDisable() {
+		send("Shutting arenas down");
+		for (Map.Entry<Integer, Game> en : runningGames.entrySet()) {
+			en.getValue().shutdown();
+		}
+		send("Attempting to close SQL connection");
+		try {
+			sql.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public boolean update() {
 		try {
 			BufferedReader br = new BufferedReader(new InputStreamReader(new URL("https://docs.google.com/uc?export=download&id=0BynZyjWQxP7XQlRJY19RQnM1RnM").openStream()));
 			v = br.readLine();
@@ -113,75 +153,38 @@ public class EndersGame extends JavaPlugin {
 				in.close();
 				fos.close();
 				send("Successfully updated EndersGame. Reload or restart to see changes");
+				return true;
 			}
+			return false;
 		} catch (IOException e) {
 			sendErr("Failed to download update or check for update");
 			e.printStackTrace();
+			return false;
 		}
 	}
 	
-	public void onDisable() {
-		try {
-			for (GameManageRun r : gm.getRunningGameInstances()) {
-				r.resetDoor(gm.getGame(r.getGameId()));
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
-		ejectAll();
-		send("Attempting to close SQL connection");
-		try {
-			sql.close();
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public HashMap<Integer, Game> getRunningGames() {
+		return runningGames;
 	}
 	
-	public void ejectAll() {
-		send("Attempting to eject all players from any arenas");
-		try {
-			for (Integer i : gm.getAllGamesFromDatabase()) {
-				HashMap<String, GameTeam> list = gm.getGamePlayers(i);
-				for (Map.Entry<String, GameTeam> en : list.entrySet()) {
-					el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
-				}
-				list.clear();
-				gm.updateGamePlayers(i, list);
-			}
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public void addRunner(Game game) {
+		runningGames.put(game.getGameId(), game);
 	}
 	
-	public void ejectGame(int gameid) {
-		send("Attempting to eject all players from arena " + gameid);
-		try {
-			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
-			for (Map.Entry<String, GameTeam> en : list.entrySet()) {
-				el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
-			}
-			list.clear();
-			gm.updateGamePlayers(gameid, list);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public void removeRunner(int gameid) {
+		runningGames.remove(gameid);
 	}
 	
-	public void ejectPlayer(int gameid, String p) {
-		send("Attempting to eject player " + p + " from arena " + gameid);
-		try {
-			HashMap<String, GameTeam> list = gm.getGamePlayers(gameid);
-			for (Map.Entry<String, GameTeam> en : list.entrySet()) {
-				if (en.getKey().equalsIgnoreCase(p)) {
-					el.onLeaveAttemptEndersGame(new PlayerAttemptLeaveEndersGameEvent(getServer().getPlayer(en.getKey()), false));
-					return;
-				}
-			}
-			list.remove(p);
-			gm.updateGamePlayers(gameid, list);
-		} catch (SQLException e) {
-			e.printStackTrace();
-		}
+	public HashMap<Integer, Lobby> getLobbyList() {
+		return lobbyList;
+	}
+	
+	public void addLobby(Lobby lobby) {
+		lobbyList.put(lobby.getLobbyId(), lobby);
+	}
+	
+	public void removeLobby(int lobbyid) {
+		lobbyList.remove(lobbyid);
 	}
 	
 	private boolean setupSQL() {
@@ -200,7 +203,7 @@ public class EndersGame extends JavaPlugin {
 		try {
 			if (!sql.open()) return false;
 			sql.createTable("CREATE TABLE IF NOT EXISTS signs (gameid INT(10), coordX INT(15), coordY INT(15), coordZ INT(15), world VARCHAR(255))");
-			sql.createTable("CREATE TABLE IF NOT EXISTS games (gameid INT(10), lobbyid INT(10), x1 INT(15), y1 INT(15), z1 INT(15), x2 INT(15), y2 INT(15), z2 INT(15), world VARCHAR(255), players TEXT(65000), gamestage VARCHAR(50))");
+			sql.createTable("CREATE TABLE IF NOT EXISTS games (gameid INT(10), lobbyid INT(10), x1 INT(15), y1 INT(15), z1 INT(15), x2 INT(15), y2 INT(15), z2 INT(15), world VARCHAR(255), gamestage VARCHAR(50))");
 			sql.createTable("CREATE TABLE IF NOT EXISTS lobbies (lobbyid INT(10), x1 INT(15), y1 INT(15), z1 INT(15), x2 INT(15), y2 INT(15), z2 INT(15), world VARCHAR(255))");
 			sql.createTable("CREATE TABLE IF NOT EXISTS gamespawns (gameid INT(10), x1 INT(15), y1 INT(15), z1 INT(15), x2 INT(15), y2 INT(15), z2 INT(15), world VARCHAR(255))");
 			sql.createTable("CREATE TABLE IF NOT EXISTS lobbyspawns (lobbyid INT(10), coordX INT(15), coordY INT(15), coordZ INT(15), world VARCHAR(255))");
@@ -213,10 +216,6 @@ public class EndersGame extends JavaPlugin {
 	
 	public SQL getSQL() {
 		return sql;
-	}
-	
-	public GameManager getGameManager() {
-		return gm;
 	}
 	
 	public Config getEnderConfig() {
@@ -253,7 +252,7 @@ public class EndersGame extends JavaPlugin {
 		if (s.hasPermission("EndersGame.create")) s.sendMessage(ChatColor.GOLD + "/eg setspawn [arena|lobby] [id]");
 		if (s.hasPermission("EndersGame.create")) s.sendMessage(ChatColor.GOLD + "/eg cancel");
 		if (s.hasPermission("EndersGame.delete")) s.sendMessage(ChatColor.GOLD + "/eg delete [arena|lobby] [id]");
-		if (s.hasPermission("EndersGame.override")) s.sendMessage(ChatColor.GOLD + "/eg ejectall - EJECTS ALL PLAYERS FROM ARENAS IN CASE OF ERROR");
+		if (s.hasPermission("EndersGame.override")) s.sendMessage(ChatColor.GOLD + "/eg ejectall - Ejects all players from all arenas");
 	}
 	
 	public HashMap<String, GameTeam> convertPlayerListToHash(String args) {
@@ -372,19 +371,16 @@ public class EndersGame extends JavaPlugin {
 						int x;
 						try {
 							x = Integer.parseInt(args[1]);
-							EventHandle.callPlayerJoinEndersGameEvent(gm.getGame(x), player);
-							return true;
-						} catch (NumberFormatException e) {
-							player.sendMessage(ChatColor.GOLD + args[1] + ChatColor.RED + " is not a number");
-							return true;
-						} catch (SQLException e) {
-							if (e.getMessage() != null && e.getMessage().equalsIgnoreCase("ResultSet closed")) {
+							Game game = runningGames.get(x);
+							if (game != null) {
+								game.addPlayer(player);
+								return true;
+							} else {
 								player.sendMessage(ChatColor.RED + "That arena doesn't exist");
 								return true;
 							}
-							player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
-							sendErr("SQLException while trying to get a lobby and game from the database, error: " + e.getErrorCode() + ", message: " + e.getMessage());
-							e.printStackTrace();
+						} catch (NumberFormatException e) {
+							player.sendMessage(ChatColor.GOLD + args[1] + ChatColor.RED + " is not a number");
 							return true;
 						}
 					} else {
@@ -403,15 +399,17 @@ public class EndersGame extends JavaPlugin {
 		
 		else if (args[0].equalsIgnoreCase("leave")) {
 			if (sender instanceof Player) {
-				PlayerAttemptLeaveEndersGameEvent event = EventHandle.callPlayerAttemptLeaveEndersGameEvent((Player) sender, true);
-				if (event.getSuccess() && event.shouldMessage()) {
-					sender.sendMessage(ChatColor.GREEN + "You have left the arena");
-					return true;
+				Player player = (Player) sender;
+				for (Map.Entry<Integer, Game> en : runningGames.entrySet()) {
+					if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
+						en.getValue().ejectPlayer(player, true);
+						return true;
+					}
 				}
-				else if (!event.getSuccess() && event.shouldMessage()) {
-					sender.sendMessage(ChatColor.RED + "You aren't in an arena");
-					return true;
-				}
+				player.sendMessage(ChatColor.RED + "You aren't in any games");
+				return true;
+			} else {
+				sender.sendMessage(ChatColor.RED + "You have to be a player to leave a game");
 				return true;
 			}
 		}
@@ -419,8 +417,8 @@ public class EndersGame extends JavaPlugin {
 		else if (args[0].equalsIgnoreCase("list")) {
 			if (sender.hasPermission("EndersGame.list")) {
 				try {
-					ArrayList<Integer> gamelist = gm.getAllGamesFromDatabase();
-					ArrayList<Integer> lobbylist = gm.getAllLobbiesFromDatabase();
+					ArrayList<Integer> gamelist = Game.getAllGamesFromDatabase(sql);
+					ArrayList<Integer> lobbylist = Lobby.getAllLobbiesFromDatabase(sql);
 					sender.sendMessage(ChatColor.GOLD + "Game IDs: " + ChatColor.GREEN + gamelist.toString());
 					sender.sendMessage(ChatColor.GOLD + "Lobby IDs: " + ChatColor.GREEN + lobbylist.toString());
 					return true;
@@ -435,7 +433,9 @@ public class EndersGame extends JavaPlugin {
 		
 		else if (args[0].equalsIgnoreCase("ejectall")) {
 			if (sender.hasPermission("EndersGame.override")) {
-				ejectAll();
+				for (Map.Entry<Integer, Game> en : runningGames.entrySet()) {
+					en.getValue().ejectAllPlayers(false);
+				}
 				sender.sendMessage(ChatColor.RED + "All players ejected");
 				return true;
 			} else {
@@ -460,9 +460,15 @@ public class EndersGame extends JavaPlugin {
 						
 						if (args[1].equalsIgnoreCase("lobby")) {
 							try {
-								gm.setLobbySpawn(x, player.getLocation());
-								player.sendMessage(ChatColor.GREEN + "Lobby spawn point set at your location");
-								return true;
+								Lobby lobby = lobbyList.get(x);
+								if (lobby != null) {
+									lobby.setSpawn(player.getLocation());
+									player.sendMessage(ChatColor.GREEN + "Lobby spawn point set at your location");
+									return true;
+								} else {
+									player.sendMessage(ChatColor.RED + "That lobby doesn't exist");
+									return true;
+								}
 							} catch (SQLException e) {
 								player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
 								EndersGame.sendErr("SQLException while trying to set the spawn point for a lobby, error: " + e.getErrorCode() + ", message: " + e.getMessage());
@@ -481,9 +487,15 @@ public class EndersGame extends JavaPlugin {
 								spawns.add(y);
 								spawns.add(a);
 								try {
-									gm.setGameSpawns(x, spawns);
-									player.sendMessage(ChatColor.GREEN + "Team two spawn location set. You can now create a sign to join this arena");
-									return true;
+									Game game = runningGames.get(x);
+									if (game != null) {
+										game.setGameSpawns(spawns);
+										player.sendMessage(ChatColor.GREEN + "Team two spawn location set. You can now create a sign to join this arena");
+										return true;
+									} else {
+										player.sendMessage(ChatColor.RED + "That arena doesn't exist");
+										return true;
+									}
 								} catch (SQLException e) {
 									player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
 									EndersGame.sendErr("SQLException while trying to set a games spawn locations, error: " + e.getErrorCode() + ", message: " + e.getMessage());
@@ -523,7 +535,8 @@ public class EndersGame extends JavaPlugin {
 					b.append(" ");
 				}
 				try {
-					sender.sendMessage(sql.query(b.toString()).toString());
+					sql.query(b.toString());
+					sender.sendMessage(ChatColor.GREEN + "Sent");
 					return true;
 				} catch (SQLException e) {
 					sender.sendMessage(ChatColor.RED + "Failed to send query, error: " + e.getMessage());
@@ -536,10 +549,63 @@ public class EndersGame extends JavaPlugin {
 			}
 		}
 		
+		else if (args[0].equalsIgnoreCase("setvalue")) {
+			if (sender.hasPermission("EndersGame.override")) {
+				if (args.length == 3) {
+					if (args[1].equalsIgnoreCase("minpercenttostart")) {
+						try {
+							config.setMinPercentToStart(Integer.parseInt(args[2]));
+						} catch (NumberFormatException e) {
+							sender.sendMessage(ChatColor.RED + args[2] + " is not a number");
+							return true;
+						}
+						sender.sendMessage(ChatColor.GREEN + "Value set, allow up to 7 seconds for arenas to update");
+						return true;
+					}
+					else if (args[1].equalsIgnoreCase("percentinspawntowin")) {
+						try {
+							config.setPercentInSpawnToWin(Integer.parseInt(args[2]));
+						} catch (NumberFormatException e) {
+							sender.sendMessage(ChatColor.RED + args[2] + " is not a number");
+							return true;
+						}
+						sender.sendMessage(ChatColor.GREEN + "Value set, allow up to 7 seconds for arenas to update");
+						return true;
+					}
+					else if (args[1].equalsIgnoreCase("maxplayers")) {
+						try {
+							config.setMaxPlayers(Integer.parseInt(args[2]));
+						} catch (NumberFormatException e) {
+							sender.sendMessage(ChatColor.RED + args[2] + " is not a number");
+							return true;
+						}
+						sender.sendMessage(ChatColor.GREEN + "Value set, allow up to 7 seconds for arenas to update");
+						return true;
+					}
+				}
+				sender.sendMessage(ChatColor.GOLD + "/eg [minpercenttostart|percentinspawntowin|maxplayers]");
+				return true;
+			} else {
+				sender.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.override)");
+				return true;
+			}
+		}
+		
 		else if (args[0].equalsIgnoreCase("version")) {
 			sender.sendMessage(ChatColor.GOLD + "EndersGame Version: " + ChatColor.BLUE + getDescription().getVersion());
 			sender.sendMessage(ChatColor.GOLD + "Server Version: " + ChatColor.BLUE + getServer().getVersion());
 			return true;
+		}
+		
+		else if (args[0].equalsIgnoreCase("update") && sender.hasPermission("update")) {
+			send("Checking for new version(s)");
+			if (update()) {
+				sender.sendMessage(ChatColor.GREEN + "Update successful, reload to see changes");
+				return true;
+			} else {
+				sender.sendMessage(ChatColor.GREEN + "No new update");
+				return true;
+			}
 		}
 		
 		else if (args[0].equalsIgnoreCase("cancel")) {
@@ -547,7 +613,7 @@ public class EndersGame extends JavaPlugin {
 				sender.sendMessage(ChatColor.RED + "You must be a player to cancel");
 				return true;
 			} else {
-				EventHandle.callCancelCreatingCommandEvent((Player) sender);
+				Game.cancelCreatingCommandEventForPlayer((Player) sender, true);
 				return true;
 			}
 		}
@@ -557,9 +623,15 @@ public class EndersGame extends JavaPlugin {
 				if (args.length == 3) {
 					if (args[1].equalsIgnoreCase("arena")) {
 						try {
-							gm.unregisterGame(Integer.parseInt(args[2]));
-							sender.sendMessage(ChatColor.GREEN + "Unregistered arena with the database, ID: " + args[2]);
-							return true;
+							Game game = runningGames.get(Integer.parseInt(args[2]));
+							if (game != null) {
+								game.removeFromDatabase();
+								sender.sendMessage(ChatColor.GREEN + "Unregistered arena with the database, ID: " + args[2]);
+								return true;
+							} else {
+								sender.sendMessage(ChatColor.RED + "That arena doesn't exist");
+								return true;
+							}
 						} catch (NumberFormatException e) {
 							sender.sendMessage(ChatColor.GOLD + args[2] + ChatColor.RED + " is not a number");
 							return true;
@@ -573,9 +645,12 @@ public class EndersGame extends JavaPlugin {
 					
 					else if (args[1].equalsIgnoreCase("lobby")) {
 						try {
-							gm.unregisterLobby(Integer.parseInt(args[2]));
-							sender.sendMessage(ChatColor.GREEN + "Unregistered lobby with the database, ID: " + args[2]);
-							return true;
+							Lobby lobby = lobbyList.get(Integer.parseInt(args[2]));
+							if (lobby != null) {
+								lobby.removeFromDatabase();
+								sender.sendMessage(ChatColor.GREEN + "Unregistered lobby with the database, ID: " + args[2]);
+								return true;
+							}
 						} catch (NumberFormatException e) {
 							sender.sendMessage(ChatColor.GOLD + args[2] + ChatColor.RED + " is not a number");
 							return true;
@@ -590,7 +665,7 @@ public class EndersGame extends JavaPlugin {
 						return true;
 					}
 				} else {
-					sender.sendMessage(ChatColor.GOLD + "/eg delete [game|lobby] [id]");
+					sender.sendMessage(ChatColor.GOLD + "/eg delete [arena|lobby] [id]");
 					return true;
 				}
 			} else {
