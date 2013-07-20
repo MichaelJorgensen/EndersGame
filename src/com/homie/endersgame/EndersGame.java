@@ -109,13 +109,6 @@ public class EndersGame extends JavaPlugin {
 		
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
 		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
-		if (debug) getServer().getScheduler().scheduleSyncRepeatingTask(this, new Runnable() {
-			@Override
-			public void run() {
-				debug("Current games: " + runningGames.keySet().toString());
-				debug("Current lobbies: " + lobbyList.keySet().toString());
-			}
-		}, 1200L, 1200L);
 		send("Checking for new version(s)");
 		//update();
 	}

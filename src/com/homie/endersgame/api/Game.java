@@ -80,7 +80,6 @@ public class Game implements Runnable {
 	
 	private Sign sign;
 	private Location signLocation;
-	private World world;
 	private GameStage gamestage;
 	private Lobby lobby;
 	
@@ -94,7 +93,6 @@ public class Game implements Runnable {
 		this.l1 = l1;
 		this.l2 = l2;
 		this.gamespawns = gamespawns;
-		this.world = l1.getWorld();
 		this.gamestage = GameStage.Lobby;
 		updateGame();
 		int i = 0;
@@ -192,7 +190,7 @@ public class Game implements Runnable {
 			Block b = getSign(gameid, sql);
 			if (b == null) return false;
 			return (sign.getX() == b.getX() && sign.getY() == b.getY() && sign.getZ() == b.getZ());
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			return false;
 		}
 	}
@@ -403,21 +401,30 @@ public class Game implements Runnable {
 		this.perToWin = plugin.getConfiguration().getPercentInSpawnToWin();
 		this.gate_blocks = getGateBlocks(l1, l2);
 		if (sign == null && !missingSign) missingSign = true; 
-		if (!missingSign && !(world.getBlockAt(sign.getLocation()).getState() instanceof Sign)) { sign = null; missingSign = true; }
+		if (!missingSign && !(plugin.getServer().getWorld(sign.getWorld().getName()).getBlockAt(sign.getLocation()).getState() instanceof Sign)) { sign = null; missingSign = true; }
 	}
 	
 	private void updateGameSign() {
+		if (!(plugin.getServer().getWorld(signLocation.getWorld().getName()).getBlockAt((int) signLocation.getX(), (int) signLocation.getY(), (int) signLocation.getZ()).getState() instanceof Sign)) return;
 		try {
-			sign = (Sign) signLocation.getWorld().getBlockAt(signLocation).getState();
+			sign = (Sign) plugin.getServer().getWorld(signLocation.getWorld().getName()).getBlockAt((int) signLocation.getX(), (int) signLocation.getY(), (int) signLocation.getZ()).getState();
 		} catch (Exception e) {
 			return;
 		}
 		if (sign == null) return;
 		String line = sign.getLine(2);
-		int originalSize = Integer.parseInt(line.split("/")[0]);
-		int currentSize = ingame_players.size();
-		int originalMax = Integer.parseInt(line.split("/")[1]);
-		int currentMax = maxPlayers;
+		int originalSize = 0;
+		int currentSize = 0;
+		int originalMax = 0;
+		int currentMax = 0;
+		try {
+			originalSize = Integer.parseInt(line.split("/")[0]);
+			currentSize = ingame_players.size();
+			originalMax = Integer.parseInt(line.split("/")[1]);
+			currentMax = maxPlayers;
+		} catch (NumberFormatException e) {
+			return;
+		}
 		if (ingame_players.size() == 0 && gamestage != GameStage.Lobby) {
 			gamestage = GameStage.Lobby;
 		}
@@ -450,7 +457,7 @@ public class Game implements Runnable {
 			if (openDoors == 10 && !doors) {
 				for (int i = 0; i < gate_blocks.size(); i++) {
 					Block b = gate_blocks.get(i);
-					world.getBlockAt(b.getLocation()).setType(Material.AIR);
+					plugin.getServer().getWorld(b.getLocation().getWorld().getName()).getBlockAt(b.getLocation()).setType(Material.AIR);
 				}
 				doors = true;
 				sendGameMessage(ChatColor.GREEN + "The gates are open!");
@@ -703,7 +710,7 @@ public class Game implements Runnable {
 	
 	private void resetDoors() {
 		for (int i = 0; i < gate_blocks.size(); i++) {
-			world.getBlockAt(gate_blocks.get(i).getLocation()).setType(Material.GLOWSTONE);
+			plugin.getServer().getWorld(gate_blocks.get(i).getWorld().getName()).getBlockAt(gate_blocks.get(i).getLocation()).setType(Material.GLOWSTONE);
 		}
 	}
 	
@@ -811,7 +818,7 @@ public class Game implements Runnable {
 			EndersGame.playing_players_gamemode.remove(name);
 			EndersGame.playing_players_inventory.remove(name);
 			list.remove(name);
-			player.teleport(world.getSpawnLocation());
+			player.teleport(plugin.getServer().getWorld(player.getWorld().getName()).getSpawnLocation());
 			EventHandle.callPlayerLeaveEndersGameEvent(gameid, player);
 			if (message) player.sendMessage(ChatColor.GREEN + "You have left arena " + gameid);
 		}

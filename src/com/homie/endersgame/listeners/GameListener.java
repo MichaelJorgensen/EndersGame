@@ -105,7 +105,7 @@ public class GameListener implements Listener {
 		Block b = event.getBlock();
 		if (b.getState() instanceof Sign) {
 			Sign s = (Sign) b.getState();
-			if (s.getLine(0).equalsIgnoreCase(ChatColor.DARK_RED + "Ender's Game")) {
+			if (s.getLine(0).toLowerCase().contains("ender's game")) {
 				try {
 					if (Game.getSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]), plugin.getSQL()) != null) {
 						Game.unregisterSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]), plugin.getSQL());
@@ -357,6 +357,9 @@ public class GameListener implements Listener {
 						return;
 					} catch (IndexOutOfBoundsException | NumberFormatException e) {
 						player.sendMessage(ChatColor.RED + "The sign isn't formatted properly!");
+						return;
+					} catch (NullPointerException e) {
+						player.sendMessage(ChatColor.RED + "That arena doesn't exist");
 						return;
 					}
 				} else {
