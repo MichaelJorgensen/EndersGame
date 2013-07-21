@@ -129,6 +129,7 @@ public class Game implements Runnable {
 			}
 			i++;
 		}
+		gate_blocks = getGateBlocks(l1, l1);
 		board = Bukkit.getScoreboardManager().getNewScoreboard();
 		Objective obj = board.registerNewObjective("spawnscore", "spawn");
 		obj.setDisplayName("In Enemy Spawn");
