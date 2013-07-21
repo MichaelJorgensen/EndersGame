@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -22,6 +23,7 @@ import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryCreativeEvent;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
@@ -31,17 +33,15 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
+import com.github.one4me.ImprovedOfflinePlayer;
 import com.homie.endersgame.EndersGame;
+import com.homie.endersgame.api.Game;
 import com.homie.endersgame.api.Game.GameTeam;
-import com.homie.endersgame.api.GameManager;
-import com.homie.endersgame.api.events.EventHandle;
-import com.homie.endersgame.runnable.GameManageRun;
-import com.homie.endersgame.runnable.RemovePlayer;
+import com.homie.endersgame.api.Lobby;
 
 public class GameListener implements Listener {
 
 	private EndersGame plugin;
-	private GameManager gm;
 	
 	public static HashMap<String, Location> creating_game_locations = new HashMap<String, Location>();
 	public static HashMap<String, Location> creating_lobby_locations = new HashMap<String, Location>();
@@ -50,7 +50,6 @@ public class GameListener implements Listener {
 	
 	public GameListener(EndersGame plugin) {
 		this.plugin = plugin;
-		this.gm = plugin.getGameManager();
 	}
 	
 	@EventHandler(priority = EventPriority.NORMAL)
@@ -65,30 +64,27 @@ public class GameListener implements Listener {
 				return;
 			}
 			if (player.hasPermission("EndersGame.createsign")) {
-				try {
-					if (gm.getGame(i) != null && !gm.getAllSignsFromDatabase().contains(i)) {
-						event.setLine(0, ChatColor.DARK_RED + "Ender's Game");
-						event.setLine(1, "Arena " + i);
-						event.setLine(2, "0/" + plugin.getEnderConfig().getMaxPlayers());
-						event.setLine(3, "Lobby");
-						try {
-							gm.registerSign(event.getBlock(), i);
-						} catch (SQLException e) {
-							e.printStackTrace();
-						}
-					} else {
-						player.sendMessage(ChatColor.RED + "That arena doesn't exist or a sign to that arena already exists");
-						event.getBlock().breakNaturally();
+				if (plugin.getRunningGames().get(i) != null && !Game.isRegisteredSign((Sign) event.getBlock().getState(), i, plugin.getSQL())) {
+					event.setLine(0, ChatColor.DARK_RED + "Ender's Game");
+					event.setLine(1, "Arena " + i);
+					event.setLine(2, "0/" + plugin.getEnderConfig().getMaxPlayers());
+					event.setLine(3, "Lobby");
+					try {
+						Game.registerSign(i, (Sign) event.getBlock().getState(), plugin.getSQL());
+						plugin.getRunningGames().get(i).setSignLocation(event.getBlock().getLocation());
 						return;
+					} catch (SQLException e) {
+						e.printStackTrace();
 					}
-				} catch (SQLException e) {
-					if (e.getMessage() != null && e.getMessage().equalsIgnoreCase("ResultSet closed")) {
-						player.sendMessage(ChatColor.RED + "That arena doesn't exist or a sign to that arena already exists");
-						event.getBlock().breakNaturally();
-						return;
-					}
-					e.printStackTrace();
+				} else {
+					player.sendMessage(ChatColor.RED + "That arena doesn't exist or a sign to that arena already exists");
+					event.getBlock().breakNaturally();
+					return;
 				}
+			} else {
+				player.sendMessage(ChatColor.RED + "You do not have permission (EndersGame.createsign)");
+				event.getBlock().breakNaturally();
+				return;
 			}
 		}
 	}
@@ -96,22 +92,23 @@ public class GameListener implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onBlockPlace(BlockPlaceEvent event) {
 		Player player = event.getPlayer();
-		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (r.getIngamePlayers().contains(player.getName())) {
+		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+			if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
 				event.setCancelled(true);
+				return;
 			}
 		}
 	}
 	
-	@EventHandler(priority = EventPriority.HIGHEST)
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
 	public void onBlockBreak(BlockBreakEvent event) {
 		Block b = event.getBlock();
 		if (b.getState() instanceof Sign) {
 			Sign s = (Sign) b.getState();
-			if (s.getLine(0).equalsIgnoreCase(ChatColor.DARK_RED + "Ender's Game")) {
+			if (s.getLine(0).toLowerCase().contains("ender's game")) {
 				try {
-					if (gm.getSign(Integer.parseInt(s.getLine(1).split("Arena ")[1])) != null && !event.isCancelled()) {
-						gm.unregisterSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]));
+					if (Game.getSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]), plugin.getSQL()) != null) {
+						Game.unregisterSign(Integer.parseInt(s.getLine(1).split("Arena ")[1]), plugin.getSQL());
 						return;
 					}
 				} catch (NumberFormatException | IndexOutOfBoundsException | SQLException e) {
@@ -121,19 +118,30 @@ public class GameListener implements Listener {
 			}
 		}
 		Player player = event.getPlayer();
-		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (r.getIngamePlayers().contains(player.getName()) && !player.hasPermission("EndersGame.override")) {
+		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+			if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
 				event.setCancelled(true);
 				return;
 			}
 		}
 	}
 	
+	@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+	public void onPlayerDamage(EntityDamageEvent event) {
+		if (event.getEntity() instanceof Player) {
+			Player player = (Player) event.getEntity();
+			for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+				if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
+					event.setCancelled(true);
+				}
+			}
+		}
+	}
+	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerDrop(PlayerDropItemEvent event) {
-		Player player = event.getPlayer();
-		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (r.getIngamePlayers().contains(player.getName())) {
+		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+			if (en.getValue().getArrayListofPlayers().contains(event.getPlayer().getName())) {
 				event.setCancelled(true);
 			}
 		}
@@ -148,12 +156,12 @@ public class GameListener implements Listener {
 	
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onInventory(InventoryCreativeEvent event) {
-		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (event.getWhoClicked() instanceof Player) {
-				Player player = (Player) event.getWhoClicked();
-				if (r.getIngamePlayers().contains(player.getName())) {
+		if (event.getWhoClicked() instanceof Player) {
+			Player player = (Player) event.getWhoClicked();
+			for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+				if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
 					event.setCancelled(true);
-					break;
+					return;
 				}
 			}
 		}
@@ -164,35 +172,30 @@ public class GameListener implements Listener {
 		if (event.getEntity().getType() == EntityType.SNOWBALL) {
 			List<Entity> e = event.getEntity().getNearbyEntities(1, 1.5, 1);
 			if (!e.isEmpty()) {
-				if (e.get(0) instanceof Player) {
-					Player player = (Player) e.get(0);
+				int size = e.size();
+				if (e.get(size-1) instanceof Player) {
+					Player player = (Player) e.get(size-1);
 					if (!players_hit.containsKey(player.getName())) {
-						try {
-							for (Integer i : gm.getAllGamesFromDatabase()) {
-								if (gm.getGamePlayerList(i).contains(player.getName())) {
-									if (event.getEntity().getShooter() instanceof Player) {
-										Player shooter = (Player) event.getEntity().getShooter();
-										HashMap<String, GameTeam> w = gm.getGamePlayers(i);
-										if (w.get(shooter.getName()) != w.get(player.getName())) {
-											if (times_players_hit.containsKey(player.getName()) && !players_hit.containsKey(player.getName())) {
-												int u = times_players_hit.get(player.getName());
-												times_players_hit.remove(player.getName());
-												times_players_hit.put(player.getName(), u+1);
-											}
-											if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
-											players_hit.put(player.getName(), 0);
-											EndersGame.debug("times_players_hit: " + times_players_hit.toString());
-											player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
-											return;
-										} else {
-											shooter.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "Don't shoot yourself or your team!");
-											return;
-										}
+						for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+							if (en.getValue().getArrayListofPlayers().contains(player.getName())) {
+								if (event.getEntity().getShooter() instanceof Player) {
+									Player shooter = (Player) event.getEntity().getShooter();
+									HashMap<String, GameTeam> w = en.getValue().getPlayerList();
+									if (w.get(shooter.getName()) == w.get(player.getName())) {
+										shooter.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "Don't shoot yourself or your team!");
+										return;
 									}
+									if (times_players_hit.containsKey(player.getName()) && !players_hit.containsKey(player.getName())) {
+										int u = times_players_hit.get(player.getName());
+										times_players_hit.remove(player.getName());
+										times_players_hit.put(player.getName(), u+1);
+									}
+									if (!times_players_hit.containsKey(player.getName())) times_players_hit.put(player.getName(), 1);
+									players_hit.put(player.getName(), 0);
+									player.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RED + "You've been hit, you cannot move 3 seconds");
+									return;
 								}
 							}
-						} catch (SQLException g) {
-							g.printStackTrace();
 						}
 					}
 				}
@@ -203,43 +206,39 @@ public class GameListener implements Listener {
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void onPlayerChat(AsyncPlayerChatEvent event) {
 		Player player = event.getPlayer();
-		try {
-			for (Integer i : gm.getAllGamesFromDatabase()) {
-				if (gm.getGamePlayers(i).containsKey(player.getName())) {
-					HashMap<String, GameTeam> pl = gm.getGamePlayers(i);
-					GameTeam pteam = pl.get(player.getName());
-					if (pteam == GameTeam.Team1) {
-						event.setMessage(ChatColor.AQUA + "[Team1] " + ChatColor.RESET + event.getMessage());
-					}
-					else if (pteam == GameTeam.Team1Leader) {
-						event.setMessage(ChatColor.BLUE + "[Leader] " + ChatColor.RESET + event.getMessage());
-					}
-					else if (pteam == GameTeam.Team2) {
-						event.setMessage(ChatColor.RED + "[Team2] " + ChatColor.RESET + event.getMessage());
-					}
-					else if (pteam == GameTeam.Team2Leader) {
-						event.setMessage(ChatColor.DARK_RED + "[Leader] " + ChatColor.RESET + event.getMessage());
-					}
-					for (Map.Entry<String, GameTeam> en : pl.entrySet()) {
-						if (en.getValue() != pteam) {
-							if (pteam == GameTeam.Team1 && en.getValue() == GameTeam.Team1Leader) continue;
-							if (pteam == GameTeam.Team1Leader && en.getValue() == GameTeam.Team1) continue;
-							if (pteam == GameTeam.Team2 && en.getValue() == GameTeam.Team2Leader) continue;
-							if (pteam == GameTeam.Team2Leader && en.getValue() == GameTeam.Team2) continue;
-							event.getRecipients().remove(plugin.getServer().getPlayer(en.getKey()));
-						}
-					}
-					ArrayList<String> all = gm.getAllPlayingPlayers();
-					for (Player p : plugin.getServer().getOnlinePlayers()) {
-						if (!all.contains(p.getName())) {
-							event.getRecipients().remove(p);
-						}
-					}
-					return;
+		for (Map.Entry<Integer, Game> i : plugin.getRunningGames().entrySet()) {
+			if (i.getValue().getArrayListofPlayers().contains(player.getName())) {
+				HashMap<String, GameTeam> pl = i.getValue().getPlayerList();
+				GameTeam pteam = pl.get(player.getName());
+				if (pteam == GameTeam.Team1) {
+					event.setMessage(ChatColor.AQUA + "[Team1] " + ChatColor.RESET + event.getMessage());
 				}
+				else if (pteam == GameTeam.Team1Leader) {
+					event.setMessage(ChatColor.BLUE + "[Leader] " + ChatColor.RESET + event.getMessage());
+				}
+				else if (pteam == GameTeam.Team2) {
+					event.setMessage(ChatColor.RED + "[Team2] " + ChatColor.RESET + event.getMessage());
+				}
+				else if (pteam == GameTeam.Team2Leader) {
+					event.setMessage(ChatColor.DARK_RED + "[Leader] " + ChatColor.RESET + event.getMessage());
+				}
+				for (Map.Entry<String, GameTeam> en : pl.entrySet()) {
+					if (en.getValue() != pteam) {
+						if (pteam == GameTeam.Team1 && en.getValue() == GameTeam.Team1Leader) continue;
+						if (pteam == GameTeam.Team1Leader && en.getValue() == GameTeam.Team1) continue;
+						if (pteam == GameTeam.Team2 && en.getValue() == GameTeam.Team2Leader) continue;
+						if (pteam == GameTeam.Team2Leader && en.getValue() == GameTeam.Team2) continue;
+						event.getRecipients().remove(plugin.getServer().getPlayer(en.getKey()));
+					}
+				}
+				ArrayList<String> all = i.getValue().getArrayListofPlayers();
+				for (Player p : plugin.getServer().getOnlinePlayers()) {
+					if (!all.contains(p.getName())) {
+						event.getRecipients().remove(p);
+					}
+				}
+				return;
 			}
-		} catch (SQLException e) {
-			e.printStackTrace();
 		}
 	}
 	
@@ -247,22 +246,30 @@ public class GameListener implements Listener {
 	public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
 		if (event.getMessage().toLowerCase().startsWith("/eg leave")) return;
 		Player player = event.getPlayer();
-		
-		for (GameManageRun r : gm.getRunningGameInstances()) {
-			if (r.getIngamePlayers().contains(player.getName())) {
+		for (Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+			if (en.getValue().getArrayListofPlayers().contains(player.getName()) && !player.hasPermission("EndersGame.override")) {
 				event.setCancelled(true);
-				player.sendMessage(ChatColor.RED + "You can't use commands while in-game. To leave, use /eg leave");
+				player.sendMessage(ChatColor.RED + "You cannot use commands while in-game. To leave, use /eg leave");
 				return;
 			}
 		}
 	}
 	
 	@EventHandler(priority = EventPriority.NORMAL)
-	public void onPlayerLeave(PlayerQuitEvent event) {
-		event.getPlayer().resetPlayerTime();
-		plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new RemovePlayer(plugin, event.getPlayer().getName()), 1L);
+	public void onPlayerLeave(final PlayerQuitEvent event) {
 		if (event.getPlayer().hasPermission("EndersGame.create")) {
-			EventHandle.callCancelCreatingCommandEvent(event.getPlayer());
+			Game.cancelCreatingCommandEventForPlayer(event.getPlayer(), false);
+		}
+		for (final Map.Entry<Integer, Game> en : plugin.getRunningGames().entrySet()) {
+			if (en.getValue().getArrayListofPlayers().contains(event.getPlayer().getName())) {
+				event.getPlayer().resetPlayerTime();
+				plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, new Runnable() {
+					@Override
+					public void run() {
+						en.getValue().ejectOfflinePlayer(new ImprovedOfflinePlayer(Bukkit.getOfflinePlayer(event.getPlayer().getName())));
+					}
+				}, 5L);
+			}
 		}
 	}
 	
@@ -287,15 +294,17 @@ public class GameListener implements Listener {
 						Location l1 = creating_game_locations.get(name);
 						Location l2 = b.getLocation();
 						creating_game_locations.remove(name);
+						Game game = new Game(plugin, EndersGame.creating_game_ids.get(name).get(0),
+								plugin.getLobbyList().get(EndersGame.creating_game_ids.get(name).get(1)), null, l1, l2, new ArrayList<Location>());
 						try {
-							gm.registerGame(EndersGame.creating_game_ids.get(name).get(0), EndersGame.creating_game_ids.get(name).get(1), 
-									(int)l1.getX(), (int)l1.getY(), (int)l1.getZ(), (int)l2.getX(), (int)l2.getY(), (int)l2.getZ(), l1.getWorld());
+							game.addToDatabase();
 						} catch (SQLException e) {
-							player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
-							EndersGame.sendErr("SQLException while trying to register a new game, error: " + e.getErrorCode() + ", message: " + e.getMessage());
+							player.sendMessage(ChatColor.RED + "Database error while adding arena, canceling creation, error message: " + e.getMessage());
+							Game.cancelCreatingCommandEventForPlayer(player, false);
 							e.printStackTrace();
 							return;
 						}
+						plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, game, 20L, 20L);
 						EndersGame.creating_game_players.remove(name);
 						EndersGame.creating_game_ids.remove(name);
 						player.getInventory().remove(Material.WOOD_SPADE);
@@ -311,15 +320,16 @@ public class GameListener implements Listener {
 						Location l1 = creating_lobby_locations.get(name);
 						Location l2 = b.getLocation();
 						creating_lobby_locations.remove(name);
+						Lobby lobby = new Lobby(plugin, EndersGame.creating_lobby_ids.get(name), l1, l2, null);
 						try {
-							gm.registerLobby(EndersGame.creating_lobby_ids.get(name), 
-									(int)l1.getX(), (int)l1.getY(), (int)l1.getZ(), (int)l2.getX(), (int)l2.getY(), (int)l2.getZ(), l1.getWorld());
+							lobby.addToDatabase();
 						} catch (SQLException e) {
-							player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
-							EndersGame.sendErr("SQLException while trying to register a new lobby, error: " + e.getErrorCode() + ", message: " + e.getMessage());
+							player.sendMessage(ChatColor.RED + "Database error while adding lobby, canceling creation, error message: " + e.getMessage());
+							Game.cancelCreatingCommandEventForPlayer(player, false);
 							e.printStackTrace();
 							return;
 						}
+						plugin.addLobby(lobby);
 						EndersGame.creating_lobby_players.remove(name);
 						EndersGame.creating_lobby_ids.remove(name);
 						player.getInventory().remove(Material.WOOD_SPADE);
@@ -339,19 +349,17 @@ public class GameListener implements Listener {
 		Block b = event.getClickedBlock();
 		if (b.getState() instanceof Sign) {
 			Sign sign = (Sign) b.getState();
-			if (gm.isRegisteredSign(sign) && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
+			if (Game.isRegisteredSign(sign, plugin.getSQL()) && event.getAction() == Action.RIGHT_CLICK_BLOCK) {
 				if (player.hasPermission("EndersGame.join")) {
 					try {
-						EventHandle.callPlayerJoinEndersGameEvent(gm.getGame(Integer.parseInt(sign.getLine(1).split("Arena ")[1])), player);
+						plugin.getRunningGames().get(Integer.parseInt(sign.getLine(1).split("Arena ")[1])).addPlayer(player);
 						event.setCancelled(true);
 						return;
 					} catch (IndexOutOfBoundsException | NumberFormatException e) {
 						player.sendMessage(ChatColor.RED + "The sign isn't formatted properly!");
 						return;
-					} catch (SQLException e) {
-						player.sendMessage(ChatColor.RED + "There has been an error with the database: " + e.getMessage());
-						EndersGame.sendErr("SQLException while trying to get a lobby and game from the database, error: " + e.getErrorCode() + ", message: " + e.getMessage());
-						e.printStackTrace();
+					} catch (NullPointerException e) {
+						player.sendMessage(ChatColor.RED + "That arena doesn't exist");
 						return;
 					}
 				} else {

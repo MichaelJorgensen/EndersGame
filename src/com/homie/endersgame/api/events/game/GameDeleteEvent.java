@@ -1,17 +1,18 @@
 package com.homie.endersgame.api.events.game;
 
 import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
-public class CancelCreatingCommandEvent extends Event {
+import com.homie.endersgame.api.Game;
 
-	private Player player;
+public class GameDeleteEvent extends Event {
+
+	private Game game;
 	private static final HandlerList handlers = new HandlerList();
 	
-	public CancelCreatingCommandEvent(Player player) {
-		this.player = player;
+	public GameDeleteEvent(Game game) {
+		this.game = game;
 	}
 	
 	public HandlerList getHandlers() {
@@ -21,11 +22,12 @@ public class CancelCreatingCommandEvent extends Event {
 	public static HandlerList getHandlerList() {
 		return handlers;
 	}
-	public Player getPlayer() {
-		return player;
+	
+	public Game getGame() {
+		return game;
 	}
 	
 	public void call() {
-		Bukkit.getServer().getPluginManager().callEvent(this);
+		Bukkit.getPluginManager().callEvent(this);
 	}
 }
