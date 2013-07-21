@@ -600,7 +600,7 @@ public class EndersGame extends JavaPlugin {
 			return true;
 		}
 		
-		else if (args[0].equalsIgnoreCase("update") && sender.hasPermission("update")) {
+		else if (args[0].equalsIgnoreCase("update") && sender.hasPermission("EndersGame.override")) {
 			send("Checking for new version(s)");
 			if (update()) {
 				sender.sendMessage(ChatColor.GREEN + "Update successful, reload to see changes");
@@ -609,6 +609,13 @@ public class EndersGame extends JavaPlugin {
 				sender.sendMessage(ChatColor.GREEN + "No new update");
 				return true;
 			}
+		}
+		
+		else if (args[0].equalsIgnoreCase("reload") && sender.hasPermission("EndersGame.override")) {
+			sender.sendMessage(ChatColor.ITALIC + "Reloading...");
+			getServer().reload();
+			sender.sendMessage(ChatColor.ITALIC + "Done");
+			return true;
 		}
 		
 		else if (args[0].equalsIgnoreCase("cancel")) {
