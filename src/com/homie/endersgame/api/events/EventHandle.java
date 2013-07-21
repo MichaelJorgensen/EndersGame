@@ -7,6 +7,9 @@ import com.homie.endersgame.api.Game;
 import com.homie.endersgame.api.Lobby;
 import com.homie.endersgame.api.events.game.GameCreateEvent;
 import com.homie.endersgame.api.events.game.GameDeleteEvent;
+import com.homie.endersgame.api.events.game.GameEndEvent;
+import com.homie.endersgame.api.events.game.GameEndEvent.GameEndReason;
+import com.homie.endersgame.api.events.game.GameStartEvent;
 import com.homie.endersgame.api.events.game.PlayerJoinEndersGameEvent;
 import com.homie.endersgame.api.events.game.PlayerLeaveEndersGameEvent;
 import com.homie.endersgame.api.events.lobby.LobbyCreateEvent;
@@ -58,6 +61,29 @@ public class EventHandle {
 	 */
 	public static GameDeleteEvent callGameDeleteEvent(Game game) {
 		GameDeleteEvent event = new GameDeleteEvent(game);
+		event.call();
+		return event;
+	}
+	
+	/**
+	 * Called when a game begins
+	 * @param game that begun
+	 * @return GameStartEvent
+	 */
+	public static GameStartEvent callGameStartEvent(Game game) {
+		GameStartEvent event = new GameStartEvent(game);
+		event.call();
+		return event;
+	}
+	
+	/**
+	 * Called when a game ends
+	 * @param game that ended
+	 * @param reason for the game ending
+	 * @return GameEndEvent
+	 */
+	public static GameEndEvent callGameEndEvent(Game game, GameEndReason reason) {
+		GameEndEvent event = new GameEndEvent(game, reason);
 		event.call();
 		return event;
 	}
