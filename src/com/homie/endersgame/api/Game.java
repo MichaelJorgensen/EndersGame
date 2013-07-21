@@ -182,7 +182,7 @@ public class Game implements Runnable {
 			Block b = getSign(signID, sql);
 			if (b == null) return false;
 			return (sign.getX() == b.getX() && sign.getY() == b.getY() && sign.getZ() == b.getZ());
-		} catch (SQLException e) {
+		} catch (Exception e) {
 			return false;
 		}
 	}
