@@ -95,8 +95,8 @@ public class EndersGame extends JavaPlugin {
 						getServer().getWorld(si.getString("world")).getBlockAt(si.getInt("coordX"), si.getInt("coordY"), si.getInt("coordZ")).getLocation(),
 						new Location(getServer().getWorld(ga.getString("world")), ga.getInt("x1"), ga.getInt("y1"), ga.getInt("z1")),
 						new Location(getServer().getWorld(ga.getString("world")), ga.getInt("x2"), ga.getInt("y2"), ga.getInt("z2")), gamespawns);
+				game.setId(getServer().getScheduler().scheduleSyncRepeatingTask(this, game, 20L, 20L));
 				runningGames.put(gameid, game);
-				getServer().getScheduler().scheduleSyncRepeatingTask(this, game, 20L, 20L);
 				a++;
 			}
 		} catch (SQLException e) {
@@ -108,7 +108,7 @@ public class EndersGame extends JavaPlugin {
 		send("Sucessfully setup " + a + " arenas and " + l + " lobbies");
 		
 		getServer().getPluginManager().registerEvents(new GameListener(this), this);
-		if (debug) getServer().getPluginManager().registerEvents(new DebugListener(), this);
+		getServer().getPluginManager().registerEvents(new DebugListener(), this);
 		send("Checking for new version(s)");
 		update();
 	}
