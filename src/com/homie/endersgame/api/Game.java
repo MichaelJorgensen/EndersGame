@@ -28,6 +28,7 @@ import org.bukkit.scoreboard.Scoreboard;
 import com.github.one4me.ImprovedOfflinePlayer;
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.events.EventHandle;
+import com.homie.endersgame.api.events.game.GameEndEvent.GameEndReason;
 import com.homie.endersgame.listeners.GameListener;
 import com.homie.endersgame.sql.SQL;
 import com.homie.endersgame.sql.options.MySQLOptions;
@@ -162,10 +163,11 @@ public class Game implements Runnable {
 		}
 	}
 	
-	public static void registerSign(int gameid, Sign sign, SQL sql) throws SQLException {
-		sql.query("INSERT INTO signs (gameid, coordX, coordY, coordZ, world) " +
+	public static void registerSign(EndersGame plugin, int gameid, Sign sign) throws SQLException {
+		plugin.getSQL().query("INSERT INTO signs (gameid, coordX, coordY, coordZ, world) " +
 				"VALUES (" + gameid + ", " + sign.getLocation().getX() + ", " + sign.getLocation().getY() + ", " + 
 				sign.getLocation().getZ() + ", '" + sign.getLocation().getWorld().getName() + "')");
+		plugin.getRunningGames().get(gameid).setSign(sign);
 		EventHandle.callSignRegisterEvent(sign);
 	}
 	
@@ -362,13 +364,14 @@ public class Game implements Runnable {
 		if (running && ingame_players.size() == 0) {
 			resetDoors();
 			running = false;
+			EventHandle.callGameEndEvent(this, GameEndReason.NoPlayersLeft);
 		}
 		
 		if (running && timelimit == 300) {
-			broadcast(ChatColor.RED + "Time limit reached in Arena " + ChatColor.GOLD + gameid);
 			ejectAllPlayers(false);
 			running = false;
 			timelimit = 0;
+			EventHandle.callGameEndEvent(this, GameEndReason.TimeLimitReached);
 		}
 		
 		if (update == 7) {
@@ -399,14 +402,13 @@ public class Game implements Runnable {
 		this.perToStart = plugin.getConfiguration().getMinPercentToStart();
 		this.maxHits = plugin.getConfiguration().getMaxHits();
 		this.perToWin = plugin.getConfiguration().getPercentInSpawnToWin();
-		this.gate_blocks = getGateBlocks(l1, l2);
 		if (sign == null && !missingSign) missingSign = true; 
 		if (!missingSign && !(plugin.getServer().getWorld(sign.getWorld().getName()).getBlockAt(sign.getLocation()).getState() instanceof Sign)) { sign = null; missingSign = true; }
 	}
 	
 	private void updateGameSign() {
-		if (!(plugin.getServer().getWorld(signLocation.getWorld().getName()).getBlockAt((int) signLocation.getX(), (int) signLocation.getY(), (int) signLocation.getZ()).getState() instanceof Sign)) return;
 		try {
+			if (!(plugin.getServer().getWorld(signLocation.getWorld().getName()).getBlockAt((int) signLocation.getX(), (int) signLocation.getY(), (int) signLocation.getZ()).getState() instanceof Sign)) return;
 			sign = (Sign) plugin.getServer().getWorld(signLocation.getWorld().getName()).getBlockAt((int) signLocation.getX(), (int) signLocation.getY(), (int) signLocation.getZ()).getState();
 		} catch (Exception e) {
 			return;
@@ -509,14 +511,16 @@ public class Game implements Runnable {
 			ArrayList<String> team2leader = getPlayersOnTeam(GameTeam.Team2Leader);
 			if (team1.size() + team1leader.size() == 0) {
 				sendGameMessage(ChatColor.GREEN + "Team 2 has won, all Team 1 players have left or have been wiped out");
-				broadcast(ChatColor.GREEN + "Team 2 has won on arena " + gameid);
 				ejectAllPlayers(false);
+				running = false;
+				EventHandle.callGameEndEvent(this, GameEndReason.Team2Victory);
 				return;
 			}
 			if (team2.size() + team2leader.size() == 0) {
 				sendGameMessage(ChatColor.GREEN + "Team 1 has won, all Team 2 players have left or have been wiped out");
-				broadcast(ChatColor.GREEN + "Team 1 has won on arena " + gameid);
 				ejectAllPlayers(false);
+				running = false;
+				EventHandle.callGameEndEvent(this, GameEndReason.Team1Victory);
 				return;
 			}
 			if (team1leader.size() == 0) {
@@ -565,14 +569,16 @@ public class Game implements Runnable {
 			if (t2win < 1) t2win = 1;
 			if (team1spawn.size() >= t1win) {
 				sendGameMessage(ChatColor.GREEN + "Team 2 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
-				broadcast(ChatColor.GREEN + "Team 2 has won on arena " + gameid);
 				ejectAllPlayers(false);
+				running = false;
+				EventHandle.callGameEndEvent(this, GameEndReason.Team2Victory);
 				return;
 			}
 			if (team2spawn.size() >= t2win) {
 				sendGameMessage(ChatColor.GREEN + "Team 1 has won, at least " + (int) perToWin + "% of their team is in the enemy spawn");
-				broadcast(ChatColor.GREEN + "Team 1 has won on arena " + gameid);
 				ejectAllPlayers(false);
+				running = false;
+				EventHandle.callGameEndEvent(this, GameEndReason.Team1Victory);
 				return;
 			}
 			bluescore.setScore(team2spawn.size());
@@ -595,7 +601,8 @@ public class Game implements Runnable {
 					genInv[0] = new ItemStack(Material.SNOW_BALL);
 					player.getInventory().setContents(genInv);
 				}
-				if (player.getInventory().getArmorContents().length != 4) {
+				ItemStack[] parmor = player.getInventory().getArmorContents();
+				if (parmor[3].getType() != Material.WOOL || parmor[2].getType() != Material.LEATHER_CHESTPLATE || parmor[1].getType() != Material.LEATHER_LEGGINGS || parmor[0].getType() != Material.LEATHER_BOOTS) {
 					if (team1.contains(player.getName())) {
 						player.getInventory().setHelmet(blueHelmet);
 						player.getInventory().setChestplate(blueChestplate);
@@ -625,8 +632,16 @@ public class Game implements Runnable {
 		}
 		if (gamestage == GameStage.PreGame && begin) {
 			gamestage = GameStage.Ingame;
+			gate_blocks = getGateBlocks(l1, l2);
 			ArrayList<String> team1 = getPlayersOnTeam(GameTeam.Team1);
+			ArrayList<String> team2 = getPlayersOnTeam(GameTeam.Team2);
 			ArrayList<String> team1leader = getPlayersOnTeam(GameTeam.Team1Leader);
+			ArrayList<String> team2leader = getPlayersOnTeam(GameTeam.Team2Leader);
+			if (team1.size() + team1leader.size() == 0 || team2.size() + team2leader.size() == 0) {
+				sendGameMessage(ChatColor.RED + "A team is empty!");
+				ejectAllPlayers(true);
+				return;
+			}
 			if (team1leader.size() < 1) {
 				int t11 = (int) (Math.random() * team1.size());
 				String t1 = team1.get(t11);
@@ -636,8 +651,6 @@ public class Game implements Runnable {
 				team1leader.add(t1);
 			}
 			team1.add(team1leader.get(0));
-			ArrayList<String> team2 = getPlayersOnTeam(GameTeam.Team2);
-			ArrayList<String> team2leader = getPlayersOnTeam(GameTeam.Team2Leader);
 			if (team2leader.size() < 1) {
 				int t12 = (int) (Math.random() * team2.size());
 				String t2 = team2.get(t12);
@@ -677,6 +690,7 @@ public class Game implements Runnable {
 				player.setPlayerTime(16000, false);
 			}
 			sendGameMessage(ChatColor.DARK_GREEN + "Prepare to fight!");
+			EventHandle.callGameStartEvent(this);
 			return;
 		}
 		if (gamestage == GameStage.Lobby) {
@@ -688,8 +702,16 @@ public class Game implements Runnable {
 				gamestage = GameStage.PreGame;
 				int t11 = (int) (Math.random() * r);
 				int t22 = (int) (Math.random() * w);
-				String t1 = getPlayersOnTeam(GameTeam.Team1).get(t11);
-				String t2 = getPlayersOnTeam(GameTeam.Team2).get(t22);
+				String t1;
+				String t2;
+				try {
+					t1 = getPlayersOnTeam(GameTeam.Team1).get(t11);
+					t2 = getPlayersOnTeam(GameTeam.Team2).get(t22);
+				} catch (Exception e) {
+					sendGameMessage(ChatColor.RED + "A team is empty!");
+					ejectAllPlayers(true);
+					return;
+				}
 				list.remove(t1);
 				list.remove(t2);
 				list.put(t1, GameTeam.Team1Leader);
@@ -708,9 +730,9 @@ public class Game implements Runnable {
 		}
 	}
 	
-	private void resetDoors() {
-		for (int i = 0; i < gate_blocks.size(); i++) {
-			plugin.getServer().getWorld(gate_blocks.get(i).getWorld().getName()).getBlockAt(gate_blocks.get(i).getLocation()).setType(Material.GLOWSTONE);
+	public void resetDoors() {
+		for (Block b : gate_blocks) {
+			plugin.getServer().getWorld(b.getWorld().getName()).getBlockAt(b.getX(), b.getY(), b.getZ()).setType(Material.GLOWSTONE);
 		}
 	}
 	
@@ -727,8 +749,8 @@ public class Game implements Runnable {
 				"VALUES (" + gameid + ", " + lobby.getLobbyId() + ", " + getLocationOne().getX() + ", " + getLocationOne().getY() + ", " + getLocationOne().getZ() + 
 				", " + getLocationTwo().getX() + ", " + getLocationTwo().getY() + ", " + getLocationTwo().getZ() + ", '" + getLocationTwo().getWorld().getName() + "', '" + 
 				GameStage.Lobby.toString() + "')");
-		plugin.addRunner(this);
 		id = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, this, 20L, 20L);
+		plugin.addRunner(this);
 		EventHandle.callGameCreateEvent(this);
 	}
 	
@@ -774,7 +796,8 @@ public class Game implements Runnable {
 		} else {
 			list.put(player.getName(), GameTeam.Team1);
 		}
-		player.sendMessage(ChatColor.GREEN + "You have joined Arena " + gameid + "'s lobby");
+		ingame_players.add(player.getName());
+		sendGameMessage(ChatColor.GREEN + player.getDisplayName() + " has joined!");
 		EventHandle.callPlayerJoinEndersGameEvent(this, player);
 	}
 	
@@ -792,6 +815,7 @@ public class Game implements Runnable {
 		ejectAllPlayers(false);
 		resetDoors();
 		running = false;
+		plugin.getServer().getScheduler().cancelTask(id);
 	}
 	
 	public void ejectAllPlayers(boolean message) {
@@ -890,6 +914,10 @@ public class Game implements Runnable {
 		return getSign(gameid, sql);
 	}
 	
+	public void setSign(Sign sign) {
+		this.sign = sign;
+	}
+	
 	public void setSignLocation(Location signLocation) {
 		this.signLocation = signLocation;
 	}
@@ -913,10 +941,6 @@ public class Game implements Runnable {
 				plugin.getServer().getPlayer(en.getKey()).sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RESET + message);
 			}
 		}
-	}
-	
-	public void broadcast(String message) {
-		plugin.getServer().broadcastMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.RESET + message);
 	}
 	
 	private void debug(String debug) {

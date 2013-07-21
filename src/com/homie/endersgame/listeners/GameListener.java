@@ -70,7 +70,7 @@ public class GameListener implements Listener {
 					event.setLine(2, "0/" + plugin.getEnderConfig().getMaxPlayers());
 					event.setLine(3, "Lobby");
 					try {
-						Game.registerSign(i, (Sign) event.getBlock().getState(), plugin.getSQL());
+						Game.registerSign(plugin, i, (Sign) event.getBlock().getState());
 						plugin.getRunningGames().get(i).setSignLocation(event.getBlock().getLocation());
 						return;
 					} catch (SQLException e) {

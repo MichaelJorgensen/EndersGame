@@ -1,5 +1,7 @@
 package com.homie.endersgame.listeners;
 
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -7,6 +9,8 @@ import org.bukkit.event.Listener;
 import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.events.game.GameCreateEvent;
 import com.homie.endersgame.api.events.game.GameDeleteEvent;
+import com.homie.endersgame.api.events.game.GameEndEvent;
+import com.homie.endersgame.api.events.game.GameStartEvent;
 import com.homie.endersgame.api.events.game.PlayerJoinEndersGameEvent;
 import com.homie.endersgame.api.events.game.PlayerLeaveEndersGameEvent;
 import com.homie.endersgame.api.events.lobby.LobbyCreateEvent;
@@ -44,5 +48,18 @@ public class DebugListener implements Listener {
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onLobbyDelte(LobbyDeleteEvent event) {
 		EndersGame.debug("A lobby has been deleted from the database, ID: " + event.getLobby().getLobbyId());
+	}
+	
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onGameStart(GameStartEvent event) {
+		EndersGame.debug("Game " + event.getGame().getGameId() + " has begun");
+		Bukkit.broadcastMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.GREEN + "Arena " + event.getGame().getGameId() + " has begun");
+	}
+	
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onGameEnd(GameEndEvent event) {
+		event.getGame().resetDoors();
+		EndersGame.debug("Game " + event.getGame().getGameId() + " has ended, reason: " + event.getReasonForGameEnding());
+		Bukkit.broadcastMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.GREEN + event.getReasonForGameEnding().toString().replaceAll("%arena%", String.valueOf(event.getGame().getGameId())));
 	}
 }
