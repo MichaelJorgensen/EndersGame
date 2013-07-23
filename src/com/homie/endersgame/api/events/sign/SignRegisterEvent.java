@@ -7,10 +7,12 @@ import org.bukkit.event.HandlerList;
 
 public class SignRegisterEvent extends Event {
 	
+	private int gameid;
 	private Sign sign;
 	private static final HandlerList handlers = new HandlerList();
 	
-	public SignRegisterEvent(Sign sign) {
+	public SignRegisterEvent(int gameid, Sign sign) {
+		this.gameid = gameid;
 		this.sign = sign;
 	}
 
@@ -20,6 +22,10 @@ public class SignRegisterEvent extends Event {
 	
 	public static HandlerList getHandlerList() {
 		return handlers;
+	}
+	
+	public int getGameId() {
+		return gameid;
 	}
 	
 	public Sign getSign() {

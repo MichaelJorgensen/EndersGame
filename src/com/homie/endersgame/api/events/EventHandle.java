@@ -112,11 +112,12 @@ public class EventHandle {
 	
 	/**
 	 * Called when a sign is added to the database. This is for debug purposes
+	 * @param gameid that the sign is registered to
 	 * @param sign that is added to the database
 	 * @return SignRegisterEvent
 	 */
-	public static SignRegisterEvent callSignRegisterEvent(Sign sign) {
-		SignRegisterEvent event = new SignRegisterEvent(sign);
+	public static SignRegisterEvent callSignRegisterEvent(int gameid, Sign sign) {
+		SignRegisterEvent event = new SignRegisterEvent(gameid, sign);
 		event.call();
 		return event;
 	}

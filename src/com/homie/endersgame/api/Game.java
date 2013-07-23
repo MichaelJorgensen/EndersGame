@@ -19,6 +19,7 @@ import org.bukkit.block.Sign;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.scoreboard.DisplaySlot;
 import org.bukkit.scoreboard.Objective;
@@ -63,6 +64,7 @@ public class Game implements Runnable {
 	private Location l1;
 	private Location l2;
 	
+	private ItemStack snowball = new ItemStack(Material.SNOW_BALL);
 	private ItemStack blueHelmet = new ItemStack(Material.WOOL, 1, (byte) 11);
 	private ItemStack blueChestplate = new ItemStack(Material.LEATHER_CHESTPLATE);
 	private ItemStack bluePants = new ItemStack(Material.LEATHER_LEGGINGS);
@@ -96,6 +98,9 @@ public class Game implements Runnable {
 		this.gamespawns = gamespawns;
 		this.gamestage = GameStage.Lobby;
 		updateGame();
+		ItemMeta snowballMeta = snowball.getItemMeta();
+		snowballMeta.setDisplayName(ChatColor.BLUE + "Laser");
+		snowball.setItemMeta(snowballMeta);
 		int i = 0;
 		while (i < 2) {
 			ItemStack boots = new ItemStack(Material.LEATHER_BOOTS);
@@ -169,7 +174,7 @@ public class Game implements Runnable {
 				"VALUES (" + gameid + ", " + sign.getLocation().getX() + ", " + sign.getLocation().getY() + ", " + 
 				sign.getLocation().getZ() + ", '" + sign.getLocation().getWorld().getName() + "')");
 		plugin.getRunningGames().get(gameid).setSign(sign);
-		EventHandle.callSignRegisterEvent(sign);
+		EventHandle.callSignRegisterEvent(gameid, sign);
 	}
 	
 	public static void unregisterSign(int gameid, SQL sql) throws SQLException {
@@ -453,7 +458,9 @@ public class Game implements Runnable {
 	private void runGame() {
 		if (gamestage == GameStage.Ingame) {
 			if (openDoors < 10) {
-				sendGameMessage(ChatColor.RED + "Opening doors in " + ChatColor.GOLD + (10-openDoors));
+				 if (openDoors == 0 || openDoors == 5 || openDoors == 7 || openDoors == 8 || openDoors == 9) {
+					 sendGameMessage(ChatColor.RED + "Opening doors in " + ChatColor.GOLD + (10-openDoors));
+				 }
 				openDoors++;
 				return;
 			}
@@ -599,7 +606,7 @@ public class Game implements Runnable {
 					player.sendMessage(ChatColor.RED + "Resetting inventory");
 					player.getInventory().clear();
 					ItemStack[] genInv = player.getInventory().getContents();
-					genInv[0] = new ItemStack(Material.SNOW_BALL);
+					genInv[0] = snowball;
 					player.getInventory().setContents(genInv);
 				}
 				ItemStack[] parmor = player.getInventory().getArmorContents();
@@ -667,7 +674,7 @@ public class Game implements Runnable {
 				player.teleport(gamespawns.get(0));
 				player.getInventory().clear();
 				ItemStack[] genInv = player.getInventory().getContents();
-				genInv[0] = new ItemStack(Material.SNOW_BALL);
+				genInv[0] = snowball;
 				player.getInventory().setContents(genInv);
 				player.getInventory().setHelmet(blueHelmet);
 				player.getInventory().setChestplate(blueChestplate);
@@ -681,7 +688,7 @@ public class Game implements Runnable {
 				player.teleport(gamespawns.get(1));
 				player.getInventory().clear();
 				ItemStack[] genInv = player.getInventory().getContents();
-				genInv[0] = new ItemStack(Material.SNOW_BALL);
+				genInv[0] = snowball;
 				player.getInventory().setContents(genInv);
 				player.getInventory().setHelmet(redHelmet);
 				player.getInventory().setChestplate(redChestplate);
@@ -719,8 +726,6 @@ public class Game implements Runnable {
 				list.put(t2, GameTeam.Team2Leader);
 				Player l1 = plugin.getServer().getPlayer(t1);
 				Player l2 = plugin.getServer().getPlayer(t2);
-				l1.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.DARK_GREEN + "You are team 1's leader!");
-				l2.sendMessage(ChatColor.GOLD + "[EndersGame] " + ChatColor.DARK_GREEN + "You are team 2's leader!");
 				sendGameMessage(ChatColor.DARK_GREEN + l1.getDisplayName() + ChatColor.DARK_GREEN + " and " + l2.getDisplayName() + ChatColor.DARK_GREEN + " are team 1 and team 2 leaders respectively");
 				sendGameMessage(ChatColor.RED + "Each team now has 1 minute with their leader to discuss battle plans," + ChatColor.BOLD + " the other team can't see your messages");
 			}
@@ -787,7 +792,7 @@ public class Game implements Runnable {
 		EndersGame.playing_players_gamemode.put(player.getName(), player.getGameMode());
 		player.getInventory().clear();
 		player.setGameMode(GameMode.SURVIVAL);
-		player.getInventory().getContents()[0] = new ItemStack(Material.SNOW_BALL);
+		player.getInventory().getContents()[0] = snowball;
 		player.updateInventory();
 		player.teleport(lobby.getSpawn());
 		int team1 = getPlayersOnTeam(GameTeam.Team1).size() + getPlayersOnTeam(GameTeam.Team1Leader).size();
@@ -798,7 +803,10 @@ public class Game implements Runnable {
 			list.put(player.getName(), GameTeam.Team1);
 		}
 		ingame_players.add(player.getName());
-		sendGameMessage(ChatColor.GREEN + player.getDisplayName() + " has joined!");
+		try {
+			player.setTexturePack("https://docs.google.com/uc?export=download&id=0BynZyjWQxP7Xa0JjZF8ta1pkeTA");
+		} catch (Exception e) {}
+		sendGameMessage(ChatColor.GREEN + player.getDisplayName() + " has joined the game on " + list.get(player.getName()).toNiceString() + "!");
 		EventHandle.callPlayerJoinEndersGameEvent(this, player);
 	}
 	
