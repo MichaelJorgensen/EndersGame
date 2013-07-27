@@ -794,6 +794,7 @@ public class Game implements Runnable {
 		player.setGameMode(GameMode.SURVIVAL);
 		player.getInventory().getContents()[0] = snowball;
 		player.updateInventory();
+		player.getInventory().setHeldItemSlot(0);
 		player.teleport(lobby.getSpawn());
 		int team1 = getPlayersOnTeam(GameTeam.Team1).size() + getPlayersOnTeam(GameTeam.Team1Leader).size();
 		int team2 = getPlayersOnTeam(GameTeam.Team2).size() + getPlayersOnTeam(GameTeam.Team2Leader).size();
